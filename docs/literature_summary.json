@@ -1,0 +1,20 @@
+{
+  "fetch_note": "fetched OpenAlex; failed queries: ",
+  "matrix_rows": 1000,
+  "serious_skim_rows": 300,
+  "deep_read_rows": 240,
+  "hostile_rows": 100,
+  "category_counts": {
+    "retargeting and teleoperation": 96,
+    "robot foundation policies": 80,
+    "action representation and sequence policies": 28,
+    "cross-embodiment and morphology transfer": 114,
+    "sim-to-real transfer": 156,
+    "task-space control and kinematics": 39,
+    "contact-rich manipulation": 44,
+    "imitation and demonstrations": 110,
+    "locomotion transfer": 28,
+    "robot manipulation learning": 82,
+    "general robot learning": 223
+  }
+}
