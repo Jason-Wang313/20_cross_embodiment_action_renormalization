@@ -1,6 +1,6 @@
 # Child Status
 
-- Stage: publication
+- Stage: complete
 - Last update: 2026-06-11
 - Commands run:
   - `python scripts/generate_literature.py`
@@ -12,19 +12,19 @@
   - `pdflatex -interaction=nonstopmode -halt-on-error main.tex`
   - copied `paper/main.pdf` to `C:/Users/wangz/Downloads/20.pdf`
   - cleaned generated LaTeX/template extraction artifacts after successful copy
-  - checked GitHub auth as `Jason-Wang313`
-  - confirmed target repo did not already exist
+  - `git commit -m "Build cross-embodiment action renormalization paper"`
+  - `gh repo create 20_cross_embodiment_action_renormalization --public --source . --remote origin --push`
+  - verified `gh repo view Jason-Wang313/20_cross_embodiment_action_renormalization`
 - Findings:
   - Literature matrix has 1000 rows.
   - Synthetic experiment completed and generated CSVs, plots, and report.
   - ICLR 2026 style files were fetched successfully.
   - Final PDF exists at `C:/Users/wangz/Downloads/20.pdf`.
+  - Public GitHub repo exists at `https://github.com/Jason-Wang313/20_cross_embodiment_action_renormalization`.
   - `docs/final_audit.md` exists.
 - Failures:
   - first LaTeX pass hit `\R` command conflict from `math_commands.tex`
 - Recovery steps:
   - removed local duplicate `\R` definition and rebuilt successfully
 - Next:
-  - commit complete repo
-  - create public GitHub repo
-  - push and verify remote URL
+  - none

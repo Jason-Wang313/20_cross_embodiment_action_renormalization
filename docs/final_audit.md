@@ -44,4 +44,4 @@
 - Official ICLR 2026 template files were fetched from the ICLR Master-Template GitHub zip referenced by the ICLR 2026 Author Guide.
 - Direct `pdflatex`, `bibtex`, `pdflatex`, `pdflatex` compilation succeeded.
 - The compiled PDF was copied to `C:/Users/wangz/Downloads/20.pdf`.
-- GitHub publication target is `Jason-Wang313/20_cross_embodiment_action_renormalization`; final push status should be verified by `git remote -v` and `gh repo view` after publication.
+- GitHub publication succeeded and was verified as public by `gh repo view Jason-Wang313/20_cross_embodiment_action_renormalization`.
