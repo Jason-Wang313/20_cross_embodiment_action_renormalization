@@ -1,0 +1,16 @@
+{
+  "url": "https://github.com/ICLR/Master-Template/raw/master/iclr2026.zip",
+  "fetched": true,
+  "files": [
+    "fancyhdr.sty",
+    "iclr2026_conference.bib",
+    "iclr2026_conference.bst",
+    "iclr2026_conference.sty",
+    "iclr2026_conference.tex",
+    "math_commands.tex",
+    "natbib.sty",
+    "._iclr2026_conference.sty",
+    "._iclr2026_conference.tex"
+  ],
+  "error": ""
+}

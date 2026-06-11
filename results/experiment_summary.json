@@ -1,0 +1,60 @@
+{
+  "source": "teacher_2link",
+  "targets": [
+    "short_2link",
+    "long_2link",
+    "asymmetric_3link"
+  ],
+  "one_step_trials": 9600,
+  "trajectory_rows": 480,
+  "one_step_relative_error": {
+    "ejar_absolute": {
+      "mean": 0.26511614972172526,
+      "median": 0.08661658135607275,
+      "p90": 0.7776149344202176
+    },
+    "ejar_capability_token": {
+      "mean": 0.015581428082885857,
+      "median": 0.005295361727778441,
+      "p90": 0.023493681846163583
+    },
+    "raw_copy": {
+      "mean": 1.2520422577532175,
+      "median": 1.211892489375075,
+      "p90": 1.9795461734695305
+    }
+  },
+  "one_step_cosine": {
+    "ejar_absolute": {
+      "mean": 0.972791115540964,
+      "median": 0.999990758378341,
+      "p90": 0.9999992380407694
+    },
+    "ejar_capability_token": {
+      "mean": 0.9984966620971037,
+      "median": 0.9999943326493144,
+      "p90": 0.999999331521626
+    },
+    "raw_copy": {
+      "mean": 0.037803386739693794,
+      "median": 0.08770173498629423,
+      "p90": 0.9559465476973186
+    }
+  },
+  "trajectory_final_error": {
+    "ejar_absolute": {
+      "mean": 0.06465506237719493,
+      "median": 0.042723896791931865,
+      "p90": 0.15330447219785365
+    },
+    "raw_copy": {
+      "mean": 0.18079978047596565,
+      "median": 0.13663175708138836,
+      "p90": 0.37618301888604894
+    }
+  },
+  "trajectory_success_10cm": {
+    "ejar_absolute": 0.7916666666666666,
+    "raw_copy": 0.37083333333333335
+  }
+}
