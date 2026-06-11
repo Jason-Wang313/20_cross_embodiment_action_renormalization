@@ -28,3 +28,7 @@
   - removed local duplicate `\R` definition and rebuilt successfully
 - Next:
   - none
+
+Exit code: 0
+End time: 2026-06-11 16:36:55 +01:00
+PDF exists: True

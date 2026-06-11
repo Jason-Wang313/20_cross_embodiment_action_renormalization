@@ -45,3 +45,9 @@
 - Direct `pdflatex`, `bibtex`, `pdflatex`, `pdflatex` compilation succeeded.
 - The compiled PDF was copied to `C:/Users/wangz/Downloads/20.pdf`.
 - GitHub publication succeeded and was verified as public by `gh repo view Jason-Wang313/20_cross_embodiment_action_renormalization`.
+
+## Orchestrator Desktop Copy
+
+Checked: 2026-06-11 16:36:57 +01:00
+Downloads PDF: C:/Users/wangz/Downloads/20.pdf
+Result: copy script exit 0 log C:\Users\wangz\robotics_60_paper_batch\logs\desktop_copy_20_20260611_163655.log
