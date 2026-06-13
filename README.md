@@ -20,6 +20,10 @@ Run the synthetic evidence:
 python experiments/run_ejar_synthetic.py
 ```
 
+The v2 run also writes `results/jacobian_noise_stress.csv` and
+`results/jacobian_noise_table.tex`, a sensitivity stress for noisy estimated
+target Jacobians.
+
 Regenerate the literature artifacts:
 
 ```powershell
@@ -47,5 +51,7 @@ The compiled PDF is copied by the batch run to `C:/Users/wangz/Downloads/20.pdf`
 - `docs/claims.md`: supported and unsupported claims.
 - `docs/reviewer_attacks.md`: adversarial review risks.
 - `docs/final_audit.md`: final readiness audit.
+- `results/jacobian_noise_stress.csv`: v2 Jacobian-misspecification stress.
+- `results/jacobian_noise_table.tex`: generated LaTeX table for the v2 stress.
 - `paper/main.tex`: anonymous ICLR-style manuscript.
 - `experiments/run_ejar_synthetic.py`: runnable synthetic experiment.
