@@ -98,6 +98,10 @@ def copy_raw_normalized(source, target, a_source):
 
 def ejar_absolute(target, q_target, desired_effect, damping=1e-5):
     j = target.jacobian(q_target)
+    return ejar_absolute_from_j(target, j, desired_effect, damping=damping)
+
+
+def ejar_absolute_from_j(target, j, desired_effect, damping=1e-5):
     b2 = np.diag(target.max_step ** 2)
     sigma = j @ b2 @ j.T
     solve = np.linalg.solve(sigma + damping * np.eye(2), desired_effect)
@@ -170,6 +174,39 @@ def one_step_trials(rng, source, targets, n_trials=3200):
                     "clipped": int(bool(info.get("clipped", False))),
                     "residual": info.get("residual", ""),
                     "token_error": info.get("token_error", ""),
+                }
+            )
+    return rows
+
+
+def jacobian_noise_stress(rng, source, targets, n_trials=1800):
+    sigmas = [0.0, 0.02, 0.05, 0.10, 0.20]
+    rows = []
+    for sigma in sigmas:
+        for idx in range(n_trials):
+            target = targets[idx % len(targets)]
+            q_s = source.random_q(rng, singular=False)
+            q_t = target.random_q(rng, singular=(idx % 13 == 0))
+            a_s = rng.uniform(-0.8, 0.8, size=source.n) * source.max_step
+            desired = source.jacobian(q_s) @ a_s
+            j_true = target.jacobian(q_t)
+            scale = max(1e-9, float(np.sqrt(np.mean(j_true ** 2))))
+            j_est = j_true + rng.normal(0.0, sigma * scale, size=j_true.shape)
+            a_t, info = ejar_absolute_from_j(target, j_est, desired)
+            actual = j_true @ a_t
+            reported = j_est @ a_t
+            rows.append(
+                {
+                    "jacobian_noise_sigma": sigma,
+                    "trial": idx,
+                    "target": target.name,
+                    "singular_stress": int(idx % 13 == 0),
+                    "relative_effect_error": rel_error(actual, desired),
+                    "effect_cosine": cosine(actual, desired),
+                    "reported_residual": float(np.linalg.norm(reported - desired)),
+                    "true_residual": float(np.linalg.norm(actual - desired)),
+                    "residual_gap": float(np.linalg.norm(actual - reported)),
+                    "clipped": int(bool(info.get("clipped", False))),
                 }
             )
     return rows
@@ -254,6 +291,45 @@ def success_summary(rows):
     return out
 
 
+def jacobian_stress_summary(rows):
+    out = {}
+    for sigma in sorted(set(float(r["jacobian_noise_sigma"]) for r in rows)):
+        group = [r for r in rows if float(r["jacobian_noise_sigma"]) == sigma]
+        rel = np.array([float(r["relative_effect_error"]) for r in group], dtype=float)
+        reported = np.array([float(r["reported_residual"]) for r in group], dtype=float)
+        true = np.array([float(r["true_residual"]) for r in group], dtype=float)
+        gap = np.array([float(r["residual_gap"]) for r in group], dtype=float)
+        clipped = np.array([int(r["clipped"]) for r in group], dtype=float)
+        out[f"{sigma:.2f}"] = {
+            "mean_relative_effect_error": float(np.mean(rel)),
+            "p90_relative_effect_error": float(np.percentile(rel, 90)),
+            "mean_reported_residual": float(np.mean(reported)),
+            "mean_true_residual": float(np.mean(true)),
+            "mean_residual_gap": float(np.mean(gap)),
+            "clip_rate": float(np.mean(clipped)),
+        }
+    return out
+
+
+def write_jacobian_noise_table(stress_summary):
+    lines = [
+        r"\begin{table}[t]",
+        r"\centering",
+        r"\caption{V2 Jacobian-misspecification stress. EJAR decodes with a noisy estimated target Jacobian, but the realized effect is evaluated with the true Jacobian. Residual gap is the mean difference between the predicted and realized target effects.}",
+        r"\label{tab:jacobian-stress}",
+        r"\begin{tabular}{lcccc}",
+        r"\toprule",
+        r"Noise $\sigma$ & Mean rel. error & p90 rel. error & True residual & Residual gap \\",
+        r"\midrule",
+    ]
+    for sigma, stats in stress_summary.items():
+        lines.append(
+            f"{sigma} & {stats['mean_relative_effect_error']:.3f} & {stats['p90_relative_effect_error']:.3f} & {stats['mean_true_residual']:.4f} & {stats['mean_residual_gap']:.4f} \\\\"
+        )
+    lines.extend([r"\bottomrule", r"\end{tabular}", r"\end{table}"])
+    (RESULTS / "jacobian_noise_table.tex").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 def plot_results(one_rows, ep_rows):
     methods = ["raw_copy", "ejar_absolute", "ejar_capability_token"]
     means = []
@@ -321,6 +397,15 @@ def write_report(summary):
     lines.append("")
     for method, rate in summary["trajectory_success_10cm"].items():
         lines.append(f"- {method}: trajectory success rate at 0.10 workspace units {rate:.3f}.")
+    if "jacobian_noise_stress" in summary:
+        lines.extend(["", "## V2 Jacobian-Misspecification Stress", ""])
+        for sigma, stats in summary["jacobian_noise_stress"].items():
+            lines.append(
+                "- sigma {sigma}: mean relative error {mean_relative_effect_error:.3f}, p90 {p90_relative_effect_error:.3f}, true residual {mean_true_residual:.4f}, residual gap {mean_residual_gap:.4f}.".format(
+                    sigma=sigma,
+                    **stats,
+                )
+            )
     lines.extend(
         [
             "",
@@ -333,6 +418,7 @@ def write_report(summary):
             "- `results/one_step_results.csv`",
             "- `results/episode_results.csv`",
             "- `results/experiment_summary.json`",
+            "- `results/jacobian_noise_stress.csv`",
             "- `figures/one_step_effect_error.png`",
             "- `figures/trajectory_transfer.png`",
         ]
@@ -354,15 +440,21 @@ def main():
         write_status("synthetic experiment running", next_step="write result CSVs, plots, and experiment report")
         one_rows = one_step_trials(rng, source, targets)
         ep_rows = trajectory_trials(rng, source, targets)
+        jacobian_rows = jacobian_noise_stress(np.random.default_rng(2020), source, targets)
         write_csv(RESULTS / "one_step_results.csv", one_rows)
+        write_csv(RESULTS / "jacobian_noise_stress.csv", jacobian_rows)
         write_csv(RESULTS / "episode_results.csv", ep_rows)
+        jacobian_summary = jacobian_stress_summary(jacobian_rows)
+        write_jacobian_noise_table(jacobian_summary)
         summary = {
             "source": source.name,
             "targets": [t.name for t in targets],
             "one_step_trials": len(one_rows),
+            "jacobian_noise_trials": len(jacobian_rows),
             "trajectory_rows": len(ep_rows),
             "one_step_relative_error": summarize(one_rows, "relative_effect_error"),
             "one_step_cosine": summarize(one_rows, "effect_cosine"),
+            "jacobian_noise_stress": jacobian_summary,
             "trajectory_final_error": summarize(ep_rows, "final_tracking_error"),
             "trajectory_success_10cm": success_summary(ep_rows),
         }

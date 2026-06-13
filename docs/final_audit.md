@@ -22,13 +22,13 @@
    The paper proves a local first-order preservation proposition under full-row-rank task Jacobian, known actuator metric, no clipping, no damping, and a valid shared task map. Damping, clipping, contact discontinuities, wrong task maps, and singularities are explicitly outside the guarantee or produce nonzero residuals.
 
 8. **Strongest evidence**
-   Runnable planar-arm experiments with a 2-link source and three target bodies. Raw normalized copy mean one-step relative effect error: 1.252. EJAR absolute-effect decoding: 0.265. EJAR capability-token decoding: 0.016. Transferred action-sequence success at 0.10 workspace units improved from 0.371 to 0.792.
+   Runnable planar-arm experiments with a 2-link source and three target bodies. Raw normalized copy mean one-step relative effect error: 1.252. EJAR absolute-effect decoding: 0.265. EJAR capability-token decoding: 0.016. Transferred action-sequence success at 0.10 workspace units improved from 0.371 to 0.792. V2 Jacobian-misspecification stress: at 20% relative target-Jacobian noise, absolute-effect mean relative error rises from 0.266 to 0.429 and residual gap rises to 0.0102.
 
 9. **Biggest weaknesses**
-   Evidence is synthetic, not real robot data. The mechanism assumes a task map and local Jacobian. Contact-rich manipulation, correspondence learning, perception, calibration error, latency, compliance, and high-speed dynamics are not solved. The novelty boundary must be presented carefully because operational-space control is strong hostile prior work.
+   Evidence is synthetic, not real robot data. The mechanism assumes a task map and local Jacobian. The v2 stress shows wrong Jacobians weaken both effect preservation and residual trustworthiness. Contact-rich manipulation, correspondence learning, perception, calibration error, latency, compliance, and high-speed dynamics are not solved. The novelty boundary must be presented carefully because operational-space control is strong hostile prior work.
 
 10. **Paper-readiness judgment**
-   Workshop. The paper is complete and runnable as a mechanism paper, but a full ICLR submission should be revised with real multi-robot logs, stronger manual citation scholarship, and contact or manipulation experiments beyond planar arms.
+   Workshop-only / strong-revise. The paper is complete and runnable as a mechanism paper, and v2 now quantifies a key model-error boundary, but a full ICLR submission should be revised with real multi-robot logs, stronger manual citation scholarship, and contact or manipulation experiments beyond planar arms.
 
 11. **Exact Downloads PDF path**
    `C:/Users/wangz/Downloads/20.pdf`
@@ -37,17 +37,21 @@
    `https://github.com/Jason-Wang313/20_cross_embodiment_action_renormalization`
 
 13. **Visible Desktop PDF copy status**
-   pending orchestrator copy
+   Obsolete orchestrator copy must remain absent under the v2 hardening PDF rule. The canonical PDF is `C:/Users/wangz/Downloads/20.pdf`.
 
 ## Build and Publication Notes
 
 - Official ICLR 2026 template files were fetched from the ICLR Master-Template GitHub zip referenced by the ICLR 2026 Author Guide.
 - Direct `pdflatex`, `bibtex`, `pdflatex`, `pdflatex` compilation succeeded.
-- The compiled PDF was copied to `C:/Users/wangz/Downloads/20.pdf`.
+- Final v2 PDF copied to `C:/Users/wangz/Downloads/20.pdf` and is 300,594 bytes.
+- PDF text extraction verified the visible `Submission-hardening version: v2` note and the Jacobian-misspecification stress table.
+- Local `paper/main.pdf` build copy was removed after the canonical Downloads copy was verified.
 - GitHub publication succeeded and was verified as public by `gh repo view Jason-Wang313/20_cross_embodiment_action_renormalization`.
+- Submission-hardening v2 is committed and pushed on `origin/master`.
 
 ## Orchestrator Desktop Copy
 
 Checked: 2026-06-11 16:36:57 +01:00
 Downloads PDF: C:/Users/wangz/Downloads/20.pdf
 Result: copy script exit 0 log C:\Users\wangz\robotics_60_paper_batch\logs\desktop_copy_20_20260611_163655.log
+V2 cleanup verified the Desktop copy is absent.

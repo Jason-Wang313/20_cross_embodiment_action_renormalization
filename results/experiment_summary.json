@@ -6,6 +6,7 @@
     "asymmetric_3link"
   ],
   "one_step_trials": 9600,
+  "jacobian_noise_trials": 9000,
   "trajectory_rows": 480,
   "one_step_relative_error": {
     "ejar_absolute": {
@@ -39,6 +40,48 @@
       "mean": 0.037803386739693794,
       "median": 0.08770173498629423,
       "p90": 0.9559465476973186
+    }
+  },
+  "jacobian_noise_stress": {
+    "0.00": {
+      "mean_relative_effect_error": 0.2658806723942947,
+      "p90_relative_effect_error": 0.7768291574390138,
+      "mean_reported_residual": 0.017719373209540194,
+      "mean_true_residual": 0.017719373209540194,
+      "mean_residual_gap": 0.0,
+      "clip_rate": 0.48944444444444446
+    },
+    "0.02": {
+      "mean_relative_effect_error": 0.2832974867617069,
+      "p90_relative_effect_error": 0.7827569246765737,
+      "mean_reported_residual": 0.0176204006258929,
+      "mean_true_residual": 0.017963593094864352,
+      "mean_residual_gap": 0.0010318852214182914,
+      "clip_rate": 0.515
+    },
+    "0.05": {
+      "mean_relative_effect_error": 0.2867861238128237,
+      "p90_relative_effect_error": 0.7694298639737587,
+      "mean_reported_residual": 0.016841573083425036,
+      "mean_true_residual": 0.017852263751107537,
+      "mean_residual_gap": 0.002459135566367408,
+      "clip_rate": 0.49666666666666665
+    },
+    "0.10": {
+      "mean_relative_effect_error": 0.34258786821044424,
+      "p90_relative_effect_error": 0.8531497893057921,
+      "mean_reported_residual": 0.01790703013465806,
+      "mean_true_residual": 0.02035390234334488,
+      "mean_residual_gap": 0.00508345982589966,
+      "clip_rate": 0.5238888888888888
+    },
+    "0.20": {
+      "mean_relative_effect_error": 0.42892566223450546,
+      "p90_relative_effect_error": 0.9156613309173122,
+      "mean_reported_residual": 0.016682284029273586,
+      "mean_true_residual": 0.02256881992197354,
+      "mean_residual_gap": 0.010158680527661846,
+      "clip_rate": 0.5066666666666667
     }
   },
   "trajectory_final_error": {

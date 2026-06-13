@@ -23,8 +23,12 @@
 
 \maketitle
 
+\noindent\textbf{Submission-hardening version: v2.}
+This revision adds a Jacobian-misspecification stress test that decodes EJAR actions with a noisy estimated target Jacobian while evaluating the realized effect under the true Jacobian.
+
 \begin{abstract}
 Robot learning papers often report cross-embodiment transfer after normalizing each robot's action vector into a common numeric range. This quietly assumes that a normalized action coordinate has comparable physical meaning across bodies. We argue that this is the wrong invariant. Equal policy tokens should preserve local task effects, or at least preserve equal fractions of what each body can locally do. We propose Effect-Jacobian Action Renormalization (EJAR), a rule that encodes actions through the local action-to-task-effect map and decodes them through a target body's capability ellipsoid. EJAR is not a larger model, a new benchmark, or an uncertainty wrapper. It changes the central action variable: policy outputs become effect tokens with an explicit residual when a requested effect is infeasible. A 1000-paper automated landscape sweep and 100-paper hostile prior-work set locate the narrow novelty boundary: operational-space control already supplies much of the mathematics, but usually below the policy interface rather than as the shared cross-embodiment action representation. In planar-arm experiments with different link lengths, degrees of freedom, and actuator limits, raw normalized action copying has mean one-step relative effect error $1.25$, while EJAR absolute-effect decoding reduces it to $0.27$ and capability-token decoding to $0.016$. Transferred action-sequence success rises from $0.371$ to $0.792$. The evidence is deliberately small and mechanistic; the claim is that action normalization is a falsifiable physical assumption, not a harmless preprocessing step.
+ A v2 stress quantifies the known-Jacobian assumption: when the target Jacobian used for decoding has 20\% relative noise, EJAR absolute-effect mean relative error rises from $0.266$ to $0.429$ and the predicted-vs-realized residual gap grows to $0.0102$.
 \end{abstract}
 
 \section{Introduction}
@@ -145,6 +149,8 @@ EJAR capability token & 0.016 & 0.005 & 0.998 \\
 \label{fig:onestep}
 \end{figure}
 
+\input{../results/jacobian_noise_table}
+
 \begin{table}[t]
 \centering
 \caption{Transferred source action sequences over 480 method episodes. Success means final tracking error below 0.10 workspace units.}
@@ -169,9 +175,11 @@ EJAR absolute effect & 0.065 & 0.043 & 0.792 \\
 \paragraph{Readout.}
 The experiment supports the narrow claim. Raw normalized joint copying is not a cross-body effect invariant. EJAR absolute decoding substantially improves effect preservation, but its mean error remains nonzero because some source effects are infeasible for a target at its configuration or under its limits. Capability-token decoding has very low normalized token error because it asks each target to realize the same fraction of its own local capability ellipsoid. These are different promises, and the paper separates them.
 
+Table~\ref{tab:jacobian-stress} stress-tests a key hidden assumption. EJAR normally decodes with the target's true local Jacobian. With noisy estimated Jacobians, mean relative effect error increases monotonically at larger perturbations, reaching $0.429$ at $\sigma=0.20$. More importantly, the residual reported by the estimated model no longer matches the realized residual: the predicted-vs-realized residual gap rises from $0.0000$ to $0.0102$. This does not invalidate the action-token claim, but it means EJAR's infeasibility diagnostic is only as trustworthy as the local action-effect model used to compute it.
+
 \section{Limitations}
 
-EJAR assumes a chosen task map $\phi$, a local Jacobian, actuator-step limits, and a regime where first-order effects are meaningful. Those assumptions can fail in contact-rich manipulation, under latency, with unmodeled compliance, or when the source and target do not share a valid task correspondence. The method does not estimate Jacobians, learn visual policies, choose contact modes, or solve nullspace objectives. The literature sweep is automated and should be treated as a hostile map, not as a substitute for manual reading. The evidence is synthetic. A submit-ready full paper would need real multi-robot demonstrations or logged heterogeneous robot datasets.
+EJAR assumes a chosen task map $\phi$, a local Jacobian, actuator-step limits, and a regime where first-order effects are meaningful. The v2 stress shows that Jacobian error directly weakens both effect preservation and the residual diagnostic: an estimated residual can look small while the realized effect differs under the true body. Those assumptions can also fail in contact-rich manipulation, under latency, with unmodeled compliance, or when the source and target do not share a valid task correspondence. The method does not estimate Jacobians, learn visual policies, choose contact modes, or solve nullspace objectives. The literature sweep is automated and should be treated as a hostile map, not as a substitute for manual reading. The evidence is synthetic. A submit-ready full paper would need real multi-robot demonstrations or logged heterogeneous robot datasets.
 
 \section{Conclusion}
 

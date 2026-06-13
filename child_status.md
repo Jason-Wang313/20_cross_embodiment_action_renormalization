@@ -1,34 +1,13 @@
 # Child Status
 
-- Stage: complete
-- Last update: 2026-06-11
+- Stage: submission hardening v2 complete
+- Last update: 2026-06-13
 - Commands run:
   - `python scripts/generate_literature.py`
   - `python experiments/run_ejar_synthetic.py`
-  - `python scripts/fetch_iclr_template.py`
-  - `pdflatex -interaction=nonstopmode -halt-on-error main.tex`
-  - `bibtex main`
-  - `pdflatex -interaction=nonstopmode -halt-on-error main.tex`
-  - `pdflatex -interaction=nonstopmode -halt-on-error main.tex`
-  - copied `paper/main.pdf` to `C:/Users/wangz/Downloads/20.pdf`
-  - cleaned generated LaTeX/template extraction artifacts after successful copy
-  - `git commit -m "Build cross-embodiment action renormalization paper"`
-  - `gh repo create 20_cross_embodiment_action_renormalization --public --source . --remote origin --push`
-  - verified `gh repo view Jason-Wang313/20_cross_embodiment_action_renormalization`
-- Findings:
-  - Literature matrix has 1000 rows.
-  - Synthetic experiment completed and generated CSVs, plots, and report.
-  - ICLR 2026 style files were fetched successfully.
-  - Final PDF exists at `C:/Users/wangz/Downloads/20.pdf`.
-  - Public GitHub repo exists at `https://github.com/Jason-Wang313/20_cross_embodiment_action_renormalization`.
-  - `docs/final_audit.md` exists.
-- Failures:
-  - first LaTeX pass hit `\R` command conflict from `math_commands.tex`
-- Recovery steps:
-  - removed local duplicate `\R` definition and rebuilt successfully
-- Next:
-  - none
-
-Exit code: 0
-End time: 2026-06-11 16:36:55 +01:00
-PDF exists: True
+- Added v2 Jacobian-misspecification stress with 9000 rows.
+- Built v2 PDF and copied it to `C:\Users\wangz\Downloads\20.pdf`.
+- Removed local `paper\main.pdf`; Desktop copy is absent.
+- Failures: none
+- Recovery steps: none
+- Next: move to paper 21
