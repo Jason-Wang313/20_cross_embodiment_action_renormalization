@@ -2,23 +2,25 @@
 
 ## Supported Claims
 
-1. Componentwise normalized joint actions do not in general preserve end-effector/task effects across robot bodies with different Jacobians.
-2. If the requested effect lies in the target robot's local feasible effect subspace and clipping is inactive, a damped pseudoinverse decoder can preserve the requested first-order task effect up to the damping residual.
-3. Capability-normalized effect tokens expose anisotropy and infeasibility that raw action normalization hides.
-4. In the included planar-arm synthetic experiment, EJAR reduces one-step effect error and improves closed-loop reaching transfer relative to raw normalized joint copying.
-5. The v2 Jacobian-misspecification stress shows that EJAR depends on a trustworthy local action-effect model: at 20% relative Jacobian noise, absolute-effect mean relative error rises from 0.266 to 0.429 and the predicted-vs-realized residual gap rises to 0.0102.
+1. Componentwise normalized joint actions do not in general preserve local task effects across robot bodies with different Jacobians, actuator limits, control periods, and local configurations.
+2. EJAR absolute-effect decoding reduces morphology-transfer effect error in the v3 synthetic suite: Family A normalized-copy mean relative error is 1.215, while EJAR absolute-effect mean relative error is 0.231.
+3. EJAR capability tokens preserve locally normalized effect authority, not absolute displacement; Family A token-relative error is 0.014.
+4. One-step action-interface mismatch compounds over transferred sequences: Family B normalized-copy success at 0.10 is 0.156, while EJAR absolute-effect success is 0.908.
+5. In a simple linear learned-action-label stress, effect labels decoded with EJAR have lower held-out relative effect error than pooled raw-action labels at 8,000 samples: 0.295 versus 0.920.
+6. EJAR residuals are useful infeasibility diagnostics under valid local maps: Family E AUPRC is 0.995.
+7. The v3 boundary families show that wrong Jacobians, wrong semantic task maps, wrong control periods, latency, and wrong contact modes degrade or break the claim.
 
 ## Formal Claim Status
 
-- Proven in paper: a local first-order proposition under full-row-rank Jacobian, known actuator metric, no clipping, and first-order dynamics.
-- Demonstrated: synthetic planar arms with different link lengths, degrees of freedom, and local configurations.
-- Unsupported beyond scope: contact-rich object manipulation, real hardware, perception-conditioned policies, high-speed dynamics, and learned Jacobian estimation.
-- The residual diagnostic is not guaranteed under wrong Jacobians; it is only as good as the estimated action-effect map used to compute it.
+- Proven in paper: a local first-order preservation proposition under full-row-rank action-effect map, known actuator metric, no clipping, no damping, and valid task correspondence.
+- Demonstrated: deterministic synthetic planar-arm/action-effect suite with 12 morphologies, nine experiment families, 114,040 rows, and 19,440 trajectory/learned-policy decision rows.
+- Unsupported beyond scope: real hardware, visual policy learning, contact-rich manipulation, correspondence discovery, safety certification, and Jacobian estimation.
 
 ## Claims Explicitly Not Made
 
-- EJAR is not a universal controller.
-- EJAR does not remove the need for feedback.
-- EJAR does not solve correspondence, contact-mode selection, or perception.
-- EJAR does not solve local Jacobian estimation or guarantee residual calibration under model error.
-- EJAR does not claim novelty over operational-space control as a controller; the novelty claim is about action renormalization at the cross-embodiment policy/data interface.
+- EJAR is not a new operational-space controller.
+- EJAR is not a universal robot-transfer method.
+- EJAR does not solve perception, correspondence, contact-mode selection, or local Jacobian estimation.
+- EJAR residuals are not safety certificates and can be falsely reassuring under wrong maps.
+- EJAR capability tokens do not preserve absolute displacement.
+- The paper does not claim to outperform robot foundation policies.

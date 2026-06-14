@@ -1,0 +1,17 @@
+\begin{table}[t]
+\centering
+\small
+\caption{Family C learned action-interface stress at the largest training budget. Effect-label and token-label models are decoded through the target local map.}
+\label{tab:learning}
+\begin{tabular}{lcccc}
+\toprule
+Method & Mean rel. err. & p90 rel. err. & Success 0.10 & Progress cosine \\
+\midrule
+effect\_label\_ejar & 0.295 & 0.689 & 1.000 & 0.984 \\
+morph\_raw & 0.922 & 1.082 & 1.000 & 0.380 \\
+pooled\_raw & 0.920 & 1.070 & 1.000 & 0.396 \\
+robot\_id\_raw & 0.920 & 1.074 & 1.000 & 0.394 \\
+capability\_token\_ejar & 0.885 & 1.578 & 0.836 & 0.878 \\
+\bottomrule
+\end{tabular}
+\end{table}

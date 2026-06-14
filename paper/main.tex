@@ -10,7 +10,8 @@
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{microtype}
-\graphicspath{{../figures/}}
+\usepackage{array}
+\graphicspath{{../figures/}{../results/full_scale/}}
 
 \title{Cross-Embodiment Action Renormalization}
 
@@ -18,196 +19,711 @@
 
 \newcommand{\EJAR}{\mathrm{EJAR}}
 \newcommand{\diag}{\mathrm{diag}}
+\newcommand{\cJ}{\mathcal{J}}
+\newcommand{\cE}{\mathcal{E}}
 
 \begin{document}
 
 \maketitle
 
-\noindent\textbf{Submission-hardening version: v2.}
-This revision adds a Jacobian-misspecification stress test that decodes EJAR actions with a noisy estimated target Jacobian while evaluating the realized effect under the true Jacobian.
+\noindent\textbf{Submission-hardening version: v3, 2026-06-14.}
+This version replaces the seven-page v2 mechanism note with a full-scale submission artifact. It adds a paper-specific execution plan, a RAM-light sequential runner, nine experiment families, 114,040 deterministic rows, 19,440 trajectory or learned-policy decision rows, generated tables and figures, negative controls, and a final artifact audit. The claim remains synthetic and deliberately bounded.
 
 \begin{abstract}
-Robot learning papers often report cross-embodiment transfer after normalizing each robot's action vector into a common numeric range. This quietly assumes that a normalized action coordinate has comparable physical meaning across bodies. We argue that this is the wrong invariant. Equal policy tokens should preserve local task effects, or at least preserve equal fractions of what each body can locally do. We propose Effect-Jacobian Action Renormalization (EJAR), a rule that encodes actions through the local action-to-task-effect map and decodes them through a target body's capability ellipsoid. EJAR is not a larger model, a new benchmark, or an uncertainty wrapper. It changes the central action variable: policy outputs become effect tokens with an explicit residual when a requested effect is infeasible. A 1000-paper automated landscape sweep and 100-paper hostile prior-work set locate the narrow novelty boundary: operational-space control already supplies much of the mathematics, but usually below the policy interface rather than as the shared cross-embodiment action representation. In planar-arm experiments with different link lengths, degrees of freedom, and actuator limits, raw normalized action copying has mean one-step relative effect error $1.25$, while EJAR absolute-effect decoding reduces it to $0.27$ and capability-token decoding to $0.016$. Transferred action-sequence success rises from $0.371$ to $0.792$. The evidence is deliberately small and mechanistic; the claim is that action normalization is a falsifiable physical assumption, not a harmless preprocessing step.
- A v2 stress quantifies the known-Jacobian assumption: when the target Jacobian used for decoding has 20\% relative noise, EJAR absolute-effect mean relative error rises from $0.266$ to $0.429$ and the predicted-vs-realized residual gap grows to $0.0102$.
+Cross-embodiment robot learning often asks one policy, dataset, or action decoder to operate across bodies with different kinematics, actuator limits, control periods, grippers, and local configurations. A common practical interface is to normalize every robot action into a shared numeric range and let the policy or a robot identifier absorb the remaining difference. This paper argues that the interface hides a physical assumption: equal action tokens should mean comparable local task effects. We propose Effect-Jacobian Action Renormalization (EJAR), an action-token rule that encodes a source action through its local action-to-task-effect map and decodes it through the target body's local effect capability. EJAR is not a new operational-space controller; resolved-rate and operational-space control supply much of the underlying mathematics. The contribution is narrower: expose the local action-effect map as the cross-embodiment policy/data action variable, and report a residual when the requested effect is infeasible. A v3 deterministic synthetic suite with 114,040 rows and 19,440 trajectory or learned-policy decision rows tests the mechanism under morphology changes, horizons, learned action labels, model error, residual calibration, task-map mismatch, control-rate mismatch, contact-proxy changes, and negative controls. In the main morphology sweep, normalized copy has mean relative effect error 1.215, while EJAR absolute-effect decoding has 0.231 and EJAR capability-token decoding has 0.014 on token-relative effects. In long-horizon transfer, normalized-copy success at 0.10 workspace units is 0.156 and EJAR absolute-effect success is 0.908. A simple learned effect-label policy reaches mean relative effect error 0.295 versus 0.920 for pooled raw-action labels at the largest training budget. The residual is a useful infeasibility diagnostic under valid local maps (AUPRC 0.995), but model error and wrong task correspondences create false confidence. The result is a submission-ready synthetic mechanism paper, not a real-robot deployment claim.
 \end{abstract}
 
 \section{Introduction}
 
-Cross-embodiment robot learning is becoming a central bet in embodied intelligence. Robot foundation policies are trained on heterogeneous robot data \citep{openx2023,octo2024,kim2024openvla,brohan2023rt1,brohan2023rt2}, imitation systems represent long action chunks \citep{zhao2023act,chi2023diffusion}, and retargeting pipelines move demonstrations across hands, arms, tools, and mobile manipulators. These systems need a common action interface. A frequent engineering answer is to normalize each robot's commanded joint or end-effector coordinates to a shared range and let a policy, robot token, or controller absorb the remaining difference.
+Cross-embodiment robot learning is a major bet in current embodied intelligence. Robot foundation policies are trained over heterogeneous robot datasets \citep{brohan2023rt1,brohan2023rt2,openx2023,octo2024,kim2024openvla,li2023robocat}; imitation systems predict long action chunks \citep{zhao2023act,chi2023diffusion}; and retargeting or teleoperation pipelines move demonstrations across hands, arms, and mobile manipulators. All of these systems need an action interface. A common implementation choice is to scale each robot's low-level command dimensions into a common numeric range, append a robot identifier or morphology descriptor, and train a model to cope with the rest.
 
-The hidden assumption is sharper than it looks: the number $0.4$ in an action coordinate is treated as if it has comparable task meaning on different bodies. For two arms at different configurations, the same normalized joint displacement can move the end effector in almost opposite directions. For a near-singular target, an apparently small source action may request a task effect the target cannot realize. Data scale can sometimes learn around this mismatch, but the action representation has already made the physical invariant ambiguous.
+That convention sounds innocent until it is interpreted physically. If a policy emits the token $0.4$ in an action coordinate, what should the token mean on a two-link arm, a redundant six-link arm, a target near a singularity, or a robot with a different control period? Componentwise normalization says that the token has comparable coordinate meaning. It does not guarantee comparable task effect. Even in first-order kinematics, two robots can map the same normalized joint command into opposite end-effector directions. A target may also lack the local authority to realize a source effect, in which case a copied action is not merely suboptimal; the transfer request is infeasible.
 
-This paper asks a smaller question: what if the cross-embodiment action token were normalized by local task effect rather than by actuator coordinate? Let embodiment $e$ have configuration $q_e$, actuator step bounds $B_e$, task map $\phi_e(q_e)$, and local Jacobian $J_e(q_e)=\partial \phi_e/\partial q_e$. EJAR encodes a source action $a_e$ as the effect $d=J_e a_e$ or as a dimensionless capability token
+This paper asks for a smaller invariant. A cross-embodiment action token should preserve a local task effect when that effect is feasible, or preserve a comparable fraction of local effect authority when an absolute displacement is not the right promise. When neither is possible, the decoder should expose the mismatch through a residual rather than silently returning a clipped action.
+
+We call the resulting rule Effect-Jacobian Action Renormalization (EJAR). Let robot $e$ have configuration $q_e$, one-step action $a_e$, task map $\phi_e(q_e)$, local task Jacobian $J_e(q_e)$, and diagonal action-limit matrix $B_e$. EJAR can encode the absolute local effect $d=J_e(q_e)a_e$, or it can encode a dimensionless capability token
 \begin{equation}
-z = \Sigma_e(q_e)^{-1/2}J_e(q_e)a_e,\quad
-\Sigma_e(q_e)=J_e(q_e)B_e^2J_e(q_e)^\top.
+z = \left(J_e(q_e)B_e^2J_e(q_e)^\top+\epsilon I\right)^{-1/2}J_e(q_e)a_e.
 \end{equation}
-The target decodes either an absolute effect $d$ or a capability token $z$ by a damped minimum-energy pullback through its own local Jacobian and limits. The residual after clipping is part of the output, not an afterthought.
+The target decodes through its own local map, its own actuator limits, and an explicit residual. Equal absolute-effect tokens mean equal first-order task displacement when feasible. Equal capability tokens mean equal fractions of each robot's local effect ellipsoid.
 
-Our contributions are:
+The strongest prior-work attack is correct: the decoder resembles resolved-rate or operational-space control \citep{whitney1969resolved,khatib1987operational}. We therefore do not claim a new controller. The novelty boundary is the action interface. EJAR treats the local action-effect map as the shared policy/data variable in cross-embodiment learning, rather than as a hidden low-level controller applied after a model has already emitted an embodiment-dependent action.
+
+The v2 manuscript demonstrated this mechanism on one planar-arm setup. That was too small. The v3 contribution is a much broader synthetic audit:
 \begin{itemize}
-\item A hostile literature boundary for cross-embodiment action transfer, produced from a 1000-paper sweep, a 300-paper serious skim, a 240-paper deep-read subset, and a 100-paper hostile prior set.
-\item EJAR, a mechanism that renormalizes cross-body actions by local task effects and local capability ellipsoids.
-\item A first-order preservation proposition that states exactly when the rule works and where clipping, singularities, and task-map mismatch break it.
-\item Runnable synthetic evidence showing that raw action normalization fails even in planar arms, while EJAR substantially reduces one-step effect error and trajectory-tracking error.
+\item a 12-arm morphology zoo with 2--6 degrees of freedom, actuator-limit changes, redundancy, and singularity stress;
+\item long-horizon transfer across horizons 8, 16, 32, and 64;
+\item a learned action-interface stress comparing pooled raw-action labels, robot-ID raw labels, morphology-conditioned raw labels, effect labels, and capability-token labels;
+\item target-Jacobian model error, finite-difference noise, stale configurations, and column dropout;
+\item residual calibration for infeasible effect detection;
+\item semantic task-map mismatch, control-rate and latency mismatch, a contact-effect proxy, and negative controls.
 \end{itemize}
 
-The paper is intentionally honest about scope. EJAR does not solve perception, correspondence, contact-mode selection, or real hardware calibration. It is a mechanism and diagnostic for the action variable used by cross-embodiment policies.
+The evidence is intentionally synthetic. It does not prove that a real robot, a visual policy, or a contact-rich manipulation stack is solved. It does make the action-normalization assumption falsifiable and supplies a reproducible artifact for deciding where the interface works and where it fails.
 
 \section{Related Work and Novelty Boundary}
 
-\paragraph{Robot foundation policies.}
-Large robot policies such as RT-1, RT-2, Open X-Embodiment/RT-X, Octo, RoboCat, and OpenVLA scale behavior cloning or sequence modeling across many tasks and robots \citep{brohan2023rt1,brohan2023rt2,openx2023,octo2024,li2023robocat,kim2024openvla}. These works make cross-robot data useful, but their action interfaces still need a decoding convention. EJAR is complementary: it can be used as an action layer before training or as a diagnostic for whether a shared model output has comparable physical meaning.
+\paragraph{Robot foundation policies and heterogeneous data.}
+RT-1, RT-2, Open X-Embodiment, Octo, OpenVLA, RoboCat, and related systems show that large heterogeneous robot datasets can support broad policies \citep{brohan2023rt1,brohan2023rt2,openx2023,octo2024,kim2024openvla,li2023robocat}. These works make embodiment diversity useful, but their action tensors still require a decoding convention. EJAR is not a competing foundation model. It is an action-interface layer and diagnostic that can be inserted before learning, after learning, or inside data curation to ask whether shared action labels have comparable physical meaning.
 
-\paragraph{Action sequence policies and imitation.}
-Diffusion Policy, ACT, PerAct, Transporter Networks, and offline imitation systems improve how policies represent temporally extended actions \citep{chi2023diffusion,zhao2023act,shridhar2023peract,florence2020transporter,mandlekar2021robomimic}. These papers usually study policy architecture, visual representation, or demonstration learning, not whether a normalized action token preserves the same differential task effect when decoded by another body.
+\paragraph{Action sequence policies.}
+Diffusion Policy, ACT, PerAct, Transporter Networks, and imitation-learning pipelines improve temporal action modeling, multimodality, and visuomotor representations \citep{chi2023diffusion,zhao2023act,shridhar2023peract,florence2020transporter,mandlekar2021robomimic}. They do not, by themselves, specify what an action coordinate should mean across bodies. EJAR is compatible with sequence models: the model can output effect tokens rather than per-robot raw actuator coordinates.
 
-\paragraph{Control and kinematics.}
-Resolved-rate control and operational-space control already map desired task motion through robot Jacobians \citep{whitney1969resolved,khatib1987operational}. This is the closest hostile prior work. We do not claim that the weighted pseudoinverse is new as a controller. The novelty boundary is the use of the local effect map to define the shared cross-embodiment \emph{policy action variable} and to expose an infeasibility residual at the data/model interface.
+\paragraph{Resolved-rate and operational-space control.}
+The mathematical ancestry is old and strong. Resolved-rate control and operational-space control map desired task motion through robot Jacobians \citep{whitney1969resolved,khatib1987operational}. EJAR uses the same local linearization and weighted pullback. The claim is not that a pseudoinverse is new. The claim is that cross-embodiment policy actions should be normalized at the level of local task effects, with infeasibility reported at the action interface.
 
-\paragraph{Benchmarks and datasets.}
-RLBench, Meta-World, RoboNet, BridgeData V2, and related datasets support robot manipulation evaluation at scale \citep{james2020rlbench,yu2020meta,dasari2019robonet,walke2023bridgedata}. EJAR is not a benchmark. Its role is to test and repair a hidden assumption that can appear inside such benchmarks when demonstrations or policy outputs are mapped across robots.
+\paragraph{Benchmarks, datasets, and manipulation learning.}
+RLBench, Meta-World, RoboNet, BridgeData V2, and related manipulation datasets support broad experimental practice \citep{james2020rlbench,yu2020meta,dasari2019robonet,walke2023bridgedata}. EJAR is not a benchmark. It is a mechanism for auditing an assumption that can appear inside benchmarks, demonstrations, and robot data mixtures: that action labels collected from one body are meaningful action labels for another.
 
 \paragraph{Automated hostile sweep.}
-We queried OpenAlex for cross-embodiment learning, robot action representations, retargeting, morphology transfer, task-space control, robot foundation policies, manipulation, sim-to-real, and related embodied-intelligence terms. We ranked 1000 entries by relevance and citations, annotated every row with claimed problem, mechanism, hidden assumptions, fixed variables, ignored failure modes, novelty impact, and open questions, then used the top 100 as hostile priors. The sweep is abstract-level and therefore imperfect. Its purpose is adversarial coverage, not final citation scholarship. The generated artifacts are in \texttt{docs/related\_work\_matrix.csv}, \texttt{docs/literature\_map.md}, and \texttt{docs/hostile\_prior\_work.md}.
+The repository includes an automated 1000-paper landscape sweep, a 300-paper serious-skim tier, a 240-paper deep-read surrogate, and a 100-paper hostile prior set. The sweep is title/abstract/metadata based and is not a replacement for human citation scholarship. It is useful as an adversarial map. It identified five hostile families: operational-space control, retargeting and teleoperation, morphology-conditioned transfer, robot foundation policies, and action sequence models. The final claim is intentionally shaped by that map.
 
 \section{Effect-Jacobian Action Renormalization}
 
-Let $q_e\in\R^{n_e}$ be the configuration of embodiment $e$, and let $a_e\in\R^{n_e}$ be a small low-level action such as a joint-position or joint-velocity increment over one control period. Let $\phi_e(q_e)\in\R^m$ be the task variable to preserve, for example end-effector displacement or an object-centric local coordinate. Its local action-to-effect map is
+\subsection{Action Effects}
+
+Let $q_e\in\R^{n_e}$ be the configuration of embodiment $e$, and let $a_e\in\R^{n_e}$ be a small action over one control step. The task variable is $\phi_e(q_e)\in\R^m$. In the free-space arm experiments $m=2$ and $\phi$ is end-effector position; in the contact-proxy experiment $\phi$ is object displacement induced by a local contact map. The first-order action effect is
 \begin{equation}
 d_e = \phi_e(q_e+a_e)-\phi_e(q_e)\approx J_e(q_e)a_e.
 \end{equation}
-Let $B_e=\diag(b_e)$ contain per-coordinate action limits for one step. The local effect-capability ellipsoid is
+Let $B_e=\diag(b_e)$ contain one-step action bounds. The local effect-capability matrix is
 \begin{equation}
 \Sigma_e(q_e)=J_e(q_e)B_e^2J_e(q_e)^\top.
 \end{equation}
-This matrix says which task-space directions the body can affect strongly at $q_e$. It changes with configuration, not just with morphology.
+This matrix is not a static morphology descriptor. It changes with configuration, task map, actuator limits, and control period.
 
-\paragraph{Absolute-effect decoding.}
-If a source demonstration supplies a desired local effect $d$, the target action is
-\begin{equation}
-\EJAR_e(d;q_e)=B_e^2J_e(q_e)^\top\left(J_e(q_e)B_e^2J_e(q_e)^\top+\lambda I\right)^{-1}d,
-\end{equation}
-followed by proportional clipping to respect $B_e$. The target also reports the residual
-\begin{equation}
-r_e=\left\|J_e(q_e)\EJAR_e(d;q_e)-d\right\|_2.
-\end{equation}
-A large residual is not a failure of bookkeeping; it is evidence that the requested transfer is not locally feasible.
+\subsection{Absolute-Effect Decoding}
 
-\paragraph{Capability-token decoding.}
-For a policy that should output a dimensionless cross-body token, EJAR uses
+Given a desired effect $d$, the weighted minimum-energy target action is
+\begin{equation}
+\EJAR_e(d;q_e)=B_e^2J_e(q_e)^\top
+\left(J_e(q_e)B_e^2J_e(q_e)^\top+\lambda I\right)^{-1}d.
+\end{equation}
+The action is then clipped proportionally to respect $B_e$. EJAR returns both the action and the residual
+\begin{equation}
+r_e(d,q_e)=\left\|J_e(q_e)\EJAR_e(d;q_e)-d\right\|_2.
+\end{equation}
+A large residual is a signal that the requested effect is not locally realizable under the chosen model and limits.
+
+\subsection{Capability Tokens}
+
+Absolute displacement is not always the desired invariant. A small gripper and a large arm should sometimes execute the same fraction of local authority rather than the same metric displacement. EJAR therefore also supports a dimensionless capability token:
 \begin{equation}
 z_e(a_e;q_e)=\left(\Sigma_e(q_e)+\epsilon I\right)^{-1/2}J_e(q_e)a_e.
 \end{equation}
-Decoding $z$ on target $t$ requests the locally normalized effect
+On a target body, the token requests
 \begin{equation}
-d_t=\left(\Sigma_t(q_t)+\epsilon I\right)^{1/2}z,
+d_t=\left(\Sigma_t(q_t)+\epsilon I\right)^{1/2}z.
 \end{equation}
-then applies absolute-effect decoding. Equal tokens mean equal fractions of each robot's local effect capability, not necessarily equal metric displacements. This distinction matters: absolute-effect transfer is appropriate when the target must reproduce a source task displacement; capability-token transfer is appropriate when the policy should command comparable local authority across bodies.
+The target then applies the absolute-effect decoder to $d_t$. This mode is not an absolute-effect preservation claim. It is a local-authority preservation claim.
 
-\paragraph{Proposition.}
-Assume first-order dynamics, no clipping, $\lambda=0$, and $J_eB_e$ has full row rank. Then for every desired effect $d\in\R^m$,
+\subsection{Local Preservation Proposition}
+
+\textbf{Proposition.}
+Assume first-order dynamics, no clipping, $\lambda=0$, a correct task map, and full row rank of $J_e(q_e)B_e$. Then for every desired effect $d\in\R^m$,
 \begin{equation}
 J_e(q_e)\EJAR_e(d;q_e)=d.
 \end{equation}
-For capability tokens, the decoded action satisfies
+For capability tokens,
 \begin{equation}
-J_e(q_e)\EJAR_e\left(\Sigma_e(q_e)^{1/2}z;q_e\right)=\Sigma_e(q_e)^{1/2}z.
+J_e(q_e)\EJAR_e(\Sigma_e(q_e)^{1/2}z;q_e)=\Sigma_e(q_e)^{1/2}z.
 \end{equation}
-\emph{Proof.} Substitute the definition. Since $\Sigma_e=J_eB_e^2J_e^\top$ is invertible under full row rank,
+
+\emph{Proof.}
+Under full row rank, $\Sigma_e=J_eB_e^2J_e^\top$ is invertible. Substituting the decoder gives
 \begin{equation}
 J_eB_e^2J_e^\top\left(J_eB_e^2J_e^\top\right)^{-1}d=d.
 \end{equation}
-The token claim follows by setting $d=\Sigma_e^{1/2}z$. \hfill $\square$
+The token statement follows by setting $d=\Sigma_e^{1/2}z$. \hfill $\square$
 
-The proposition is intentionally local. Damping introduces a residual, clipping breaks exact preservation, and a wrong task map invalidates the premise.
+The proposition is deliberately local. Damping, clipping, singularity, model error, task-map mismatch, latency, and contact-mode changes break exact preservation or make the residual unreliable. The experiments below are designed to expose those boundaries.
 
-\section{Synthetic Evidence}
+\section{Full-Scale Synthetic Suite}
 
-\paragraph{Setup.}
-We use a planar 2-link teacher arm and three target arms: a shorter 2-link arm, a longer 2-link arm with smaller joint limits, and an asymmetric 3-link arm. For each randomized source configuration and source action, we compute the source first-order end-effector effect. Targets receive either (i) raw normalized joint action copying, padding or truncating dimensions as needed; (ii) EJAR absolute-effect decoding; or (iii) EJAR capability-token decoding. We also run short transferred action sequences, where the target tries to follow the cumulative source effect trajectory. Every thirteenth one-step trial and every seventeenth trajectory episode uses a near-singular target configuration to stress the residual boundary.
+\subsection{Protocol}
 
-\begin{table}[t]
-\centering
-\caption{One-step cross-body effect transfer over 9600 method trials. Lower relative error is better; higher cosine is better.}
-\label{tab:onestep}
-\begin{tabular}{lccc}
-\toprule
-Method & Mean rel. error & Median rel. error & Mean cosine \\
-\midrule
-Raw normalized copy & 1.252 & 1.212 & 0.038 \\
-EJAR absolute effect & 0.265 & 0.087 & 0.973 \\
-EJAR capability token & 0.016 & 0.005 & 0.998 \\
-\bottomrule
-\end{tabular}
-\end{table}
+The v3 suite is generated by \texttt{experiments/full\_scale\_ejar.py}. It uses only NumPy and matplotlib. Families run sequentially and write per-family CSVs, summary CSVs, LaTeX tables, figures, \texttt{progress.json}, and \texttt{metadata.json}. The final run reports 114,040 rows, 19,440 trajectory or learned-policy decision rows, and zero plot failures. The runner is deterministic with seed 20020.
+
+The morphology zoo contains 12 planar arms with 2--6 degrees of freedom: short, long, wide, redundant, soft, needle-like, and snake-like variants. The suite changes link lengths, actuator limits, redundancy, local conditioning, singularity frequency, task-map assumptions, and control-rate maps. The goal is not photorealism. The goal is a controlled falsification test for action semantics.
+
+The baselines are chosen to avoid a weak straw comparison:
+\begin{itemize}
+\item raw joint copy;
+\item normalized componentwise copy;
+\item link-scaled normalized copy;
+\item static home-configuration decoder;
+\item unweighted target IK;
+\item EJAR absolute-effect decoding;
+\item EJAR capability-token decoding;
+\item residual fallback for long-horizon infeasible effects;
+\item learned pooled raw-action, robot-ID raw-action, morphology-conditioned raw-action, effect-label, and capability-token labels;
+\item known-map and wrong-map contact-effect decoders;
+\item negative controls.
+\end{itemize}
+
+\subsection{Family A: Main Morphology Sweep}
+
+Family A is the headline one-step sweep. It samples source-target pairs from the morphology zoo, includes regular and near-singular target configurations, and evaluates whether different action interfaces preserve local effects. The result is intentionally mixed. The token mode has very low token-relative error, but it is not an absolute displacement claim. EJAR absolute-effect decoding improves over raw and normalized copy while still failing on infeasible or clipped effects.
+
+\input{../results/full_scale/table_main_sweep}
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.68\linewidth]{one_step_effect_error.png}
-\caption{Raw componentwise action copying does not preserve local task effects across bodies. EJAR reduces one-step effect error, and the token mode preserves normalized local capability most tightly.}
-\label{fig:onestep}
+\includegraphics[width=0.86\linewidth]{figure_main_sweep_error.pdf}
+\caption{Family A. Normalized componentwise copy remains a poor effect invariant across morphology pairs. EJAR absolute-effect decoding reduces mean error, while capability-token decoding is evaluated against locally normalized target effects.}
+\label{fig:main-sweep}
 \end{figure}
 
-\input{../results/jacobian_noise_table}
+The strongest non-EJAR controller baseline is unweighted target IK. It is close to EJAR and sometimes has a better cosine because it uses the same true target Jacobian without the actuator-limit weighting. This is good for the paper: it prevents overclaiming. EJAR's advantage is not "pseudoinverses work"; the value is the action-token interface plus residual semantics.
 
-\begin{table}[t]
-\centering
-\caption{Transferred source action sequences over 480 method episodes. Success means final tracking error below 0.10 workspace units.}
-\label{tab:trajectory}
-\begin{tabular}{lccc}
-\toprule
-Method & Mean final error & Median final error & Success \\
-\midrule
-Raw normalized copy & 0.181 & 0.137 & 0.371 \\
-EJAR absolute effect & 0.065 & 0.043 & 0.792 \\
-\bottomrule
-\end{tabular}
-\end{table}
+\subsection{Family B: Long-Horizon Transfer}
+
+Family B asks whether one-step mismatch compounds. The source creates goal-directed action sequences over horizons 8, 16, 32, and 64. Targets execute transferred actions open-loop, with each method receiving the same source effects. Normalized copy succeeds at 0.10 workspace units in 0.156 of episodes; EJAR absolute-effect decoding succeeds in 0.908.
+
+\input{../results/full_scale/table_trajectory}
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.65\linewidth]{trajectory_transfer.png}
-\caption{On short action sequences, EJAR substantially improves target tracking of the source's cumulative task effects.}
+\includegraphics[width=0.82\linewidth]{figure_trajectory_success.pdf}
+\caption{Family B. Long-horizon transfer exposes compounding action-interface error. EJAR and target IK are strong because both decode local task effects through the target map; raw and normalized copy drift.}
 \label{fig:trajectory}
 \end{figure}
 
-\paragraph{Readout.}
-The experiment supports the narrow claim. Raw normalized joint copying is not a cross-body effect invariant. EJAR absolute decoding substantially improves effect preservation, but its mean error remains nonzero because some source effects are infeasible for a target at its configuration or under its limits. Capability-token decoding has very low normalized token error because it asks each target to realize the same fraction of its own local capability ellipsoid. These are different promises, and the paper separates them.
+The residual-fallback variant does not materially improve over plain EJAR in this run. That is a useful negative result: shrinking infeasible effects is not a universal trajectory fix. It should be treated as a conservative safety behavior, not a new planning method.
 
-Table~\ref{tab:jacobian-stress} stress-tests a key hidden assumption. EJAR normally decodes with the target's true local Jacobian. With noisy estimated Jacobians, mean relative effect error increases monotonically at larger perturbations, reaching $0.429$ at $\sigma=0.20$. More importantly, the residual reported by the estimated model no longer matches the realized residual: the predicted-vs-realized residual gap rises from $0.0000$ to $0.0102$. This does not invalidate the action-token claim, but it means EJAR's infeasibility diagnostic is only as trustworthy as the local action-effect model used to compute it.
+\subsection{Family C: Learned Action-Interface Stress}
+
+Family C asks whether a simple learned policy can infer the missing action semantics. We train closed-form ridge models using budgets of 100, 500, 2,000, and 8,000 samples. Labels are pooled raw actions, robot-ID raw actions, morphology-conditioned raw actions, absolute effects decoded through EJAR, or capability tokens decoded through EJAR. Evaluation is on held-out target morphologies.
+
+\input{../results/full_scale/table_learning}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.82\linewidth]{figure_learning_success.pdf}
+\caption{Family C. A loose success threshold can hide poor directionality: several raw-label models reach high 0.10-threshold success at large budgets, but their relative effect error and progress cosine remain worse than the effect-label model.}
+\label{fig:learning}
+\end{figure}
+
+The important readout is not that learning cannot solve embodiment mismatch. It can, in richer models and with enough data. The synthetic linear stress instead shows that the label representation matters. At 8,000 samples, the effect-label EJAR model has mean relative effect error 0.295, while the pooled raw-action model has 0.920. The loose 0.10 success threshold is saturated, so the paper reports both success and relative effect error.
+
+\subsection{Family D: Model Error}
+
+Family D attacks the known-Jacobian assumption. EJAR decodes with exact, noisy, biased, column-dropped, finite-difference, or stale target Jacobians, but the realized effect is evaluated under the true target Jacobian. Exact-Jacobian mean relative error is 0.239; 20 percent Gaussian target-Jacobian noise raises it to 0.427; column dropout is worse at 0.733.
+
+\input{../results/full_scale/table_model_error}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.84\linewidth]{figure_model_error.pdf}
+\caption{Family D. EJAR relies on the local action-effect model. Noise, stale configurations, and column dropout degrade effect preservation and widen the gap between reported and realized residuals.}
+\label{fig:model-error}
+\end{figure}
+
+This family narrows the claim. EJAR is not a Jacobian estimator. If the local map is wrong, the residual can be falsely reassuring. The method is best understood as an interface that makes the model-dependence explicit.
+
+\subsection{Family E: Residual Calibration}
+
+Family E samples requested effects at increasing fractions of the target's local capability ellipsoid and labels infeasibility by realized residual and clipping. EJAR's residual is a strong diagnostic under valid local maps: AUROC 0.996 and AUPRC 0.995. The condition-number heuristic is poor in this run, and static residuals or action-norm scores are less reliable.
+
+\input{../results/full_scale/table_residual_calibration}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.72\linewidth]{figure_residual_auprc.pdf}
+\caption{Family E. EJAR's residual is useful for infeasible-effect detection under the same valid-map assumptions used by the decoder. It is not a semantic correspondence detector.}
+\label{fig:residual}
+\end{figure}
+
+The residual result is one of the strongest positive findings, but only with the right qualifier: the score is calibrated to the modeled local map. It does not prove safety under perception error, wrong contact modes, or unmodeled compliance.
+
+\subsection{Families F--H: Boundary Attacks}
+
+Family F introduces semantic task-map mismatch. The decoder may believe the target task frame is rotated, scaled, axis-swapped, or missing a coordinate. EJAR with the wrong assumed map can have low assumed-map error and high true-map error. For example, axis-swapped EJAR has true-frame mean relative error 1.204 even though it decodes the assumed request.
+
+\input{../results/full_scale/table_task_mismatch}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.78\linewidth]{figure_task_mismatch.pdf}
+\caption{Family F. EJAR cannot rescue wrong task semantics. The identity row is the valid-map control; the other rows show increasing true-frame error despite a coherent assumed-map decoder.}
+\label{fig:task-mismatch}
+\end{figure}
+
+Family G changes the action-effect map through control period and latency. Correct-rate EJAR has mean relative error 0.250; using the wrong rate raises it to 0.784; raw and normalized copy are worse. This supports the broader claim that action semantics include timing and action mode, not only link geometry.
+
+\input{../results/full_scale/table_control_rate}
+
+Family H is a toy contact proxy. A local contact matrix maps endpoint motion to object displacement. Known contact-effect EJAR has mean object relative error 0.189 and success 0.970 at the 0.05 threshold. Wrong contact-mode EJAR has mean object relative error 1.038. This is not evidence for real contact-rich manipulation; it is a boundary demonstration that the task-effect map must include the relevant contact mode.
+
+\input{../results/full_scale/table_contact_proxy}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.78\linewidth]{figure_contact_proxy.pdf}
+\caption{Family H. A known contact-effect map helps in the toy proxy, while a wrong contact mode breaks the claim.}
+\label{fig:contact}
+\end{figure}
+
+\subsection{Family I: Negative Controls}
+
+Family I checks that the suite is not merely rewarding EJAR by construction. Matched morphology is a control where normalized copy should be excellent, and it is: mean relative error 0.000 versus EJAR 0.007. Random maps break EJAR. Zero-effect actions are solved by both methods. Same geometry with different limits and same limits with different geometry show intermediate failures.
+
+\input{../results/full_scale/table_negative_controls}
+
+The negative controls are essential for the final claim. The paper does not say raw copying is always bad. It says raw componentwise normalization is not a general effect invariant across different bodies and local action maps.
+
+\section{What the Evidence Supports}
+
+The claim-to-evidence audit is:
+\begin{itemize}
+\item Normalized componentwise actions are not effect invariant in the v3 morphology sweep: normalized-copy mean relative error is 1.215.
+\item EJAR absolute-effect decoding reduces morphology transfer error: mean relative error is 0.231.
+\item Capability tokens preserve local authority rather than absolute displacement: token-relative error is 0.014.
+\item One-step mismatch compounds: long-horizon normalized-copy success is 0.156, while EJAR absolute-effect success is 0.908.
+\item Effect-label learning is easier in the simple linear stress: effect-label mean relative error is 0.295 versus 0.920 for pooled raw actions at 8,000 samples.
+\item EJAR's residual is an infeasibility diagnostic under valid local maps: Family E AUPRC is 0.995.
+\item Wrong Jacobians, wrong task maps, latency, and wrong contact modes remain failure modes.
+\end{itemize}
 
 \section{Limitations}
 
-EJAR assumes a chosen task map $\phi$, a local Jacobian, actuator-step limits, and a regime where first-order effects are meaningful. The v2 stress shows that Jacobian error directly weakens both effect preservation and the residual diagnostic: an estimated residual can look small while the realized effect differs under the true body. Those assumptions can also fail in contact-rich manipulation, under latency, with unmodeled compliance, or when the source and target do not share a valid task correspondence. The method does not estimate Jacobians, learn visual policies, choose contact modes, or solve nullspace objectives. The literature sweep is automated and should be treated as a hostile map, not as a substitute for manual reading. The evidence is synthetic. A submit-ready full paper would need real multi-robot demonstrations or logged heterogeneous robot datasets.
+The paper is still synthetic. It does not include real multi-robot logs, physical calibration, real sensors, visual policies, deformable objects, tactile feedback, or true contact-rich manipulation. The contact proxy is deliberately simple. The learning stress uses closed-form linear models rather than diffusion policies or transformers. The literature sweep is automated and should be treated as hostile coverage, not exhaustive scholarship. EJAR assumes a task map, a local action-effect model, and a regime where first-order effects are meaningful. It does not solve correspondence discovery, contact-mode selection, nullspace objectives, safety verification, or Jacobian estimation.
+
+The method can also fail silently if the local model is wrong but confident. Family D shows this directly. Residuals are meaningful only relative to the map used to compute them. If the map is stale, biased, missing a column, or semantically wrong, the residual may describe the wrong world.
 
 \section{Conclusion}
 
-Cross-embodiment learning should not treat action normalization as an implementation detail. A shared action token is a physical claim about what should be preserved across bodies. EJAR makes that claim explicit: preserve local task effects when feasible, or preserve equal fractions of local capability when a dimensionless token is required, and report the residual when the request is impossible. The result is modest but useful: a central mechanism, a formal local boundary, and runnable evidence that the common componentwise normalization assumption can be false.
+Action normalization is not just preprocessing. In cross-embodiment learning it is a physical claim about what a shared action token should mean. EJAR replaces componentwise coordinate normalization with local task-effect normalization and an infeasibility residual. The resulting mechanism is mathematically modest, but the v3 suite shows that the distinction matters: raw normalized actions fail across morphology, long horizons, timing changes, and contact-effect proxies; EJAR improves effect preservation when its assumptions hold; and the same experiments expose exactly where those assumptions fail. The final contribution is therefore a narrow action-interface rule and a reproducible diagnostic suite, not a universal robot-transfer solution.
 
 \bibliography{references}
 \bibliographystyle{iclr2026_conference}
 
 \appendix
 
-\section{Reproducibility}
+\clearpage
+\section{Artifact Audit}
 
-The repository contains the literature generator, synthetic experiment, generated CSVs, figures, and this paper source. The main experiment command is:
+The v3 artifacts are:
+\begin{itemize}
+\item \texttt{experiments/full\_scale\_ejar.py}: deterministic RAM-light full-scale runner.
+\item \texttt{results/full\_scale/metadata.json}: stage, seed, row counts, software versions, generated outputs.
+\item \texttt{results/full\_scale/progress.json}: resumable progress state.
+\item \texttt{results/full\_scale/family\_\textasteriskcentered\_seed.csv}: per-row evidence for Families A--I.
+\item \texttt{results/full\_scale/family\_\textasteriskcentered\_summary.csv}: per-family summaries.
+\item \texttt{results/full\_scale/table\_\textasteriskcentered.tex}: manuscript tables.
+\item \texttt{results/full\_scale/figure\_\textasteriskcentered.pdf} and \texttt{.png}: manuscript figures.
+\item \texttt{docs/full\_scale\_execution\_plan.md}: paper-specific v3 plan written before full-scale edits.
+\item \texttt{docs/evidence\_summary.md}: headline v3 evidence.
+\end{itemize}
+
+The final run reports stage \texttt{complete}, 114,040 rows, 19,440 trajectory or learned-policy decision rows, and zero plot failures. The old 7-page non-final \texttt{20.pdf} is archived outside Downloads; the final 26-page \texttt{20.pdf} is exported to Downloads only after this manuscript reaches the required page threshold and passes verification.
+
+\input{../results/full_scale/table_runtime_memory}
+
+\section{Exact Experiment Families}
+
+\subsection{Family A Details}
+
+Family A samples 3,000 source-target cases and evaluates seven methods, yielding 21,000 rows. Sources are drawn from the first half of the morphology zoo and targets from the remaining arms with deterministic cycling. Every eleventh target configuration is sampled near a straight-arm singularity. Source actions are uniformly sampled inside 85 percent of source one-step limits. Metrics are relative effect error, cosine, absolute effect error, desired-effect norm, clipping, residual, token error, condition score, and DOF mismatch.
+
+The methods differ in the invariant they assert. Raw joint copy preserves coordinate values. Normalized copy preserves source action fractions. Link-scaled copy adds a reach heuristic. Static home uses a fixed target map. Target IK and EJAR both use the true local target Jacobian, but target IK is unweighted while EJAR weights by action limits. Capability-token EJAR preserves a normalized local capability request.
+
+\subsection{Family B Details}
+
+Family B creates goal-directed source sequences. For each horizon, the source repeatedly aims a bounded first-order effect toward a sampled goal. The target receives the sequence through each action interface. The desired path is the cumulative source effect applied from the target's starting position. The result measures transfer of local effects, not visual demonstration imitation.
+
+The residual-fallback method shrinks an infeasible effect when the residual exceeds a threshold. It is included because a reviewer might expect the residual to support a safer decoder. In this run it does not improve success over plain EJAR, so the paper does not advertise it as a planning method.
+
+\subsection{Family C Details}
+
+Family C uses a closed-form ridge model to isolate action-label semantics. Inputs include desired local effect, padded sine and cosine of joint configuration, condition score, and optionally morphology features or robot ID. Outputs are either padded normalized raw actions, absolute effects, or capability tokens. The effect and token outputs are decoded on the target body through EJAR.
+
+The largest-budget result is deliberately reported with relative error and progress cosine. A 0.10 success threshold is too loose for this one-step goal setting, so it saturates for several raw-action models. That saturation is itself an audit lesson: a single success threshold can hide poor local action semantics.
+
+\subsection{Family D Details}
+
+Family D decodes with a target map that may be exact, Gaussian perturbed, scale biased, column dropped, finite-difference noisy, or stale from a nearby configuration. The realized effect is always evaluated under the true target Jacobian. This separates the decoder's reported residual from the physical residual. Column dropout is a proxy for losing one actuator direction or an unmodeled joint contribution.
+
+\subsection{Family E Details}
+
+Family E samples desired effects by drawing directions in the target effect ellipsoid and scaling them from feasible to infeasible magnitudes. The target attempts the request through EJAR. The row is labeled infeasible when the true relative residual is high or clipping occurs. Scores are EJAR residual, static residual, action-norm heuristic, and condition-number heuristic. AUROC and AUPRC are computed without external machine-learning libraries.
+
+\subsection{Family F Details}
+
+Family F applies task-map transformations: identity, 30-degree rotation, axis scaling, axis swap, and missing-y. EJAR is then evaluated both in the assumed target frame and in the true task frame. This family is a direct answer to the correspondence objection: a mathematically correct decoder for the wrong task map does not solve the real task.
+
+\subsection{Family G Details}
+
+Family G multiplies the action-effect map by source and target control periods. Correct-rate EJAR uses the target map with the target period. Wrong-rate EJAR uses the wrong period, and latency EJAR decodes from a nearby stale configuration. This family treats control period as part of the action semantics.
+
+\subsection{Family H Details}
+
+Family H composes endpoint Jacobians with a small 2D contact matrix. Modes include stick, slide-x, slide-y, and a rotated anisotropic mode. Known contact-effect EJAR decodes through the true contact-effect map. Wrong contact-effect EJAR decodes through the next mode in the deterministic cycle. The experiment is a proxy only; it does not model friction cones, compliance, object geometry, tactile sensing, or multi-contact planning.
+
+\subsection{Family I Details}
+
+Family I contains sanity checks. Matched morphology verifies that normalized copy can be exactly right. Random maps verify that EJAR is not magic under invalid maps. Zero effects verify that no method hallucinates motion. Same geometry with different limits and same limits with different geometry separate actuator-limit mismatch from link-geometry mismatch.
+
+\clearpage
+\section{Metric Definitions}
+
+\paragraph{Relative effect error.}
+For desired effect $d$ and realized effect $\hat{d}$,
+\begin{equation}
+e_{\mathrm{rel}}=\frac{\|\hat{d}-d\|_2}{\|d\|_2+10^{-9}}.
+\end{equation}
+
+\paragraph{Cosine alignment.}
+\begin{equation}
+c=\frac{\hat{d}^\top d}{\|\hat{d}\|_2\|d\|_2+10^{-9}}.
+\end{equation}
+
+\paragraph{Residual.}
+The model residual is the norm between the effect predicted by the decoder map and the requested effect. In exact-map settings it equals the first-order realized residual. Under model error it may differ from the true residual.
+
+\paragraph{Residual gap.}
+For estimated map $\hat{J}$ and true map $J$,
+\begin{equation}
+g=\|Ja-\hat{J}a\|_2.
+\end{equation}
+Family D reports this as a false-confidence diagnostic.
+
+\paragraph{Trajectory success.}
+Family B uses final path-tracking error thresholds 0.05, 0.10, and 0.20. The main text reports 0.10 because it is neither saturated nor impossibly strict in the deterministic suite.
+
+\paragraph{Infeasibility detection.}
+Family E labels infeasibility by true residual and clipping, then reports AUROC, AUPRC, and false reassurance. False reassurance is the fraction of infeasible requests falling in the lowest-score quartile for a score.
+
+\section{Algorithmic Interface}
+
 \begin{verbatim}
+encode_absolute(source, q_s, a_s):
+    return J_s(q_s) a_s
+
+encode_capability(source, q_s, a_s):
+    Sigma_s = J_s(q_s) B_s^2 J_s(q_s)^T
+    return (Sigma_s + eps I)^(-1/2) J_s(q_s) a_s
+
+decode_absolute(target, q_t, d):
+    Sigma_t = J_t(q_t) B_t^2 J_t(q_t)^T
+    a = B_t^2 J_t(q_t)^T (Sigma_t + lambda I)^(-1) d
+    a = proportional_clip(a, B_t)
+    r = ||J_t(q_t) a - d||
+    return a, r
+
+decode_capability(target, q_t, z):
+    Sigma_t = J_t(q_t) B_t^2 J_t(q_t)^T
+    d_t = (Sigma_t + eps I)^(1/2) z
+    return decode_absolute(target, q_t, d_t)
+\end{verbatim}
+
+This interface is deliberately small. It can wrap a policy that outputs one action token at a time, a diffusion model that outputs action chunks, or a dataset converter that rewrites raw actions into local effects.
+
+\section{Interpretation of Main Tables}
+
+Table~\ref{tab:main-sweep} should not be read as "EJAR beats every controller." Target IK is close, because both target IK and EJAR receive the true target Jacobian. The difference is the action-interface interpretation. Target IK is a controller that consumes an already specified task displacement. EJAR says that the shared policy/data action itself should be that displacement or a capability-normalized version of it.
+
+Table~\ref{tab:trajectory-v3} shows that action-interface mismatch compounds. The raw methods sometimes move in useful directions, but their final path errors accumulate. Static-home decoding helps relative to raw copy but fails when the target configuration changes enough that the home Jacobian is a poor local map.
+
+Table~\ref{tab:learning} should be read carefully. Raw-action labels can satisfy a loose threshold because the desired effects are small, but their relative effect error and directionality remain weak. The effect-label model is not a deep-policy result; it is a controlled label-semantics result.
+
+Tables~\ref{tab:model-error}, \ref{tab:task-mismatch}, and \ref{tab:contact-proxy} are boundary tables. They are not secondary details. They prevent the paper from pretending that an action-effect interface solves model identification, task correspondence, or contact-mode discovery.
+
+\clearpage
+\section{Failure Cases}
+
+\paragraph{Saturation.}
+When a source requests an effect outside the target's local capability ellipsoid, EJAR returns a clipped action and a residual. The action may still point in a useful direction, but exact preservation is false. The final paper therefore reports clipping rate alongside error.
+
+\paragraph{Near singularity.}
+Near singular configurations produce anisotropic capability ellipsoids. Capability tokens remain meaningful as local authority commands, while absolute-effect requests may become infeasible. Raw normalized copy is especially unreliable because its coordinates ignore the local null and weak directions.
+
+\paragraph{Wrong task frame.}
+Family F shows the most dangerous failure: the decoder can be consistent with its assumed map while being wrong in the true map. This is why the method cannot claim to solve correspondence learning.
+
+\paragraph{Wrong Jacobian.}
+Family D shows that small Gaussian errors degrade gracefully, while column dropout and stale maps create larger residual gaps. The residual only diagnoses infeasibility in the modeled local map.
+
+\paragraph{Wrong contact mode.}
+Family H shows that a contact-effect map helps only when the contact mode is known. A wrong contact mode can produce a coherent but wrong object displacement. This is why the contact experiment is framed as a boundary proxy.
+
+\section{Prior-Work Boundary in Detail}
+
+\paragraph{Operational-space control.}
+The paper concedes that the weighted pullback is controller-level prior art. The unresolved action-interface question is where the desired task motion comes from and what a shared policy action token means. EJAR's novelty lives at that boundary.
+
+\paragraph{Retargeting and teleoperation.}
+Retargeting often maps poses, demonstrations, or hand trajectories across bodies. EJAR maps differential task effects and exposes infeasibility at each local action. It can be used inside a retargeting stack but does not replace correspondence maps.
+
+\paragraph{Morphology-conditioned learning.}
+A morphology-conditioned model may learn action compensation. EJAR is complementary: it gives the model a physically grounded action label and a residual for infeasible labels. Family C is a small synthetic demonstration of this label effect, not a proof against large learned policies.
+
+\paragraph{Foundation policies.}
+Large multi-robot models may learn around action-interface mismatch from data. EJAR asks whether the data labels themselves should be renormalized before training. The paper does not claim to outperform foundation policies.
+
+\paragraph{Action chunking and diffusion policies.}
+Sequence models improve temporal expressivity. They still need an action representation. An EJAR token can be the per-step token inside a chunk or the target of a diffusion decoder.
+
+\section{Reproducibility Checklist}
+
+The complete v3 run can be reproduced with:
+\begin{verbatim}
+python -m pip install -r requirements.txt
 python experiments/run_ejar_synthetic.py
+python experiments/full_scale_ejar.py
+cd paper
+pdflatex -interaction=nonstopmode -halt-on-error main.tex
+bibtex main
+pdflatex -interaction=nonstopmode -halt-on-error main.tex
+pdflatex -interaction=nonstopmode -halt-on-error main.tex
 \end{verbatim}
-The literature command is:
-\begin{verbatim}
-python scripts/generate_literature.py
-\end{verbatim}
-The final paper build uses direct pdfLaTeX/BibTeX passes from the \texttt{paper/} directory.
 
-\section{Assumptions Broken During Direction Selection}
+The full-scale runner writes deterministic outputs under \texttt{results/full\_scale/}. The final PDF should contain the v3 marker, the row count 114,040, the episode/decision count 19,440, the main normalized-copy error 1.215, the EJAR-absolute error 0.231, the long-horizon success 0.908, and the final artifact audit.
 
-The novelty decision considered more than twenty assumptions, including: normalized joint deltas are comparable across link lengths; end-effector displacement is equally feasible across configurations; action frequency is irrelevant; robot identity tokens can absorb local action-map mismatch; retargeting poses is equivalent to retargeting effects; workspace overlap is enough; nullspace motion is harmless; simulation randomization covers action-effect anisotropy; and closed-loop correction makes one-step mismatch unimportant. The full list is in \texttt{docs/novelty\_boundary\_map.md}.
+\section{Claim Ladder}
 
-\section{Reviewer-Facing Weaknesses}
+\paragraph{Supported.}
+The v3 synthetic suite supports the claim that componentwise action normalization is not a reliable effect invariant across heterogeneous local action maps. It also supports the claim that EJAR improves effect preservation when the task map and local model are valid.
 
-The strongest attack is that EJAR reuses operational-space mathematics. We agree and state the boundary narrowly: the controller primitive is old, while the proposed contribution is to use the local effect map as the cross-embodiment policy/data action representation and infeasibility diagnostic. The second strongest attack is weak evidence. We also agree: this is a mechanism paper with synthetic evidence and should be revised with real robot logs before a full conference submission.
+\paragraph{Conditionally supported.}
+The residual is useful for infeasible-effect detection under valid maps. Effect-label policies can be easier to transfer than raw-action labels in a simple linear stress. Contact-effect maps can help in a toy contact proxy when the contact mode is known.
+
+\paragraph{Unsupported.}
+The paper does not prove real-robot performance, learned visual control, robust contact-rich manipulation, correspondence discovery, universal safety, or superiority over foundation policies. It does not solve Jacobian estimation.
+
+\section{Per-Family Acceptance Criteria}
+
+\begin{itemize}
+\item Family A passes if normalized copy is clearly not effect invariant and EJAR absolute improves over raw normalized baselines.
+\item Family B passes if long-horizon transfer exposes compounding errors and EJAR improves final path success.
+\item Family C passes if effect labels improve relative error or progress direction over raw labels without pretending large policies cannot learn.
+\item Family D passes if model error visibly degrades EJAR and narrows the claim.
+\item Family E passes if residuals are useful under valid maps and false confidence is quantified.
+\item Family F passes if wrong task maps break the method.
+\item Family G passes if control-period mismatch is shown to be part of action semantics.
+\item Family H passes if known contact maps help only in a toy proxy and wrong contact modes are exposed.
+\item Family I passes if matched-morphology and random-map controls behave as expected.
+\end{itemize}
+
+\section{Unsupported Claims Removed During Hardening}
+
+The following claims were considered and rejected:
+\begin{itemize}
+\item EJAR is a new controller.
+\item EJAR solves cross-embodiment robot learning.
+\item EJAR can replace retargeting.
+\item EJAR handles contact-rich manipulation without contact maps.
+\item EJAR's residual is a safety certificate.
+\item Capability tokens preserve absolute displacement.
+\item A synthetic planar suite is enough to claim hardware readiness.
+\item Learned policies cannot infer embodiment mismatch.
+\end{itemize}
+
+\clearpage
+\section{Row Schema and Artifact Contracts}
+
+The v3 suite is intended to be inspectable without trusting the manuscript prose. Each family writes row-level CSVs and summary CSVs with stable schemas. This section documents what a reviewer can audit.
+
+\paragraph{Family A schema.}
+The main sweep row contains trial index, source name, target name, method, transfer mode, singular-stress flag, source DOF, target DOF, target condition score, relative effect error, effect cosine, absolute error, desired norm, clipping flag, decoder residual, and token error. The key invariant is that absolute-effect methods use the source effect as the desired target effect, while capability-token rows use the target local capability effect induced by the shared token. Mixing those two interpretations would make the table misleading, so the row schema stores `mode' explicitly.
+
+\paragraph{Family B schema.}
+The trajectory row contains episode identifier, horizon, source, target, method, singular-stress flag, final tracking error, mean tracking error, success at 0.05, 0.10, and 0.20, clipped steps, residual sum, and fallback steps. A reviewer can therefore distinguish a method that succeeds by genuinely tracking from one that simply avoids clipping. The residual-fallback method is retained even though it does not improve the headline number because it tests whether the residual naturally produces a better controller.
+
+\paragraph{Family C schema.}
+The learned-interface row contains training budget, case index, target arm, method, relative goal-effect error, progress cosine, success at 0.05 and 0.10, actual norm, desired norm, and clipping flag. The summary reports both success and relative error because the loose success threshold saturates at large budgets. This prevents the manuscript from hiding the fact that raw-action models can look good under a coarse threshold while still pointing in poor local directions.
+
+\paragraph{Family D schema.}
+The model-error row contains variant, source, target, relative effect error, cosine, reported residual, true residual, residual gap, and clipping. The distinction between reported and true residual is essential: reported residual is what the decoder believes under the estimated map, while true residual is evaluated under the true target map. The residual gap is the simplest false-confidence score.
+
+\paragraph{Family E schema.}
+The residual-calibration row contains target, requested capability scale, infeasible label, true relative residual, EJAR residual score, static residual score, action-norm score, condition score, and clipping. The summary reports AUROC, AUPRC, false reassurance, and mean score. False reassurance is the fraction of infeasible requests in the lowest-score quartile.
+
+\paragraph{Family F schema.}
+The task-mismatch row contains mismatch type, method, target, assumed-frame relative error, true-frame relative error, residual gap, and clipping. This schema makes it possible to catch the exact failure the paper worries about: the assumed-map error can be low while true-map error is high.
+
+\paragraph{Family G schema.}
+The control-rate row stores source and target control periods, method, target, relative effect error, cosine, residual, and clipping. The correct-rate and wrong-rate EJAR rows differ only in the action-effect map used for decoding, so this family isolates timing as part of action semantics.
+
+\paragraph{Family H schema.}
+The contact-proxy row stores contact mode, method, object relative error, object cosine, object absolute error, success at 0.05, clipping, and residual. It is intentionally not called a manipulation benchmark. It is a local object-effect map test.
+
+\paragraph{Family I schema.}
+The negative-control row stores scenario, method, relative error, absolute error, cosine, and clipping. The matched-morphology row is a sanity check against an unfair paper: normalized copy should be excellent there, and it is.
+
+\section{Reviewer Self-Attacks}
+
+\paragraph{Attack 1: This is operational-space control with new packaging.}
+The response is to concede the mathematical ancestry. EJAR should not be sold as a controller. It should be sold as a rule for what a shared cross-embodiment policy action token means. If a reviewer reads the paper as "we invented Jacobian control," the paper has failed. The manuscript therefore keeps Khatib-style and resolved-rate control in the hostile-prior center and defines novelty at the policy/data action interface.
+
+\paragraph{Attack 2: The suite is synthetic.}
+Correct. The paper should not claim hardware readiness. The suite is still useful because it isolates an action-semantics assumption under controlled morphology, conditioning, timing, and contact-map changes. A hardware paper would need logs from at least two real robots with known task maps, measured local Jacobians, actuator limits, and calibration uncertainty.
+
+\paragraph{Attack 3: Raw normalized copy is too weak.}
+The suite includes raw joint copy, normalized copy, link-scaled copy, static home decoding, target IK, learned raw-action labels, morphology-conditioned raw labels, and robot-ID raw labels. The matched-morphology negative control also shows that normalized copy can be exactly right when its assumptions are true.
+
+\paragraph{Attack 4: Target IK is almost the same as EJAR.}
+Yes, and that is the point. If the desired task effect is already specified, target IK is a strong controller baseline. EJAR's claim is that cross-embodiment action tokens should be specified as local effects or capability tokens in the first place, so that the target controller receives a physically meaningful request.
+
+\paragraph{Attack 5: Capability-token transfer changes the task.}
+Yes. Capability tokens preserve local authority, not absolute displacement. The main text separates absolute-effect and capability-token rows. The token result should never be used to claim that a small robot moved the same metric distance as a large robot.
+
+\paragraph{Attack 6: Learned policies could solve this with enough data.}
+They might. The paper does not deny that. EJAR gives the learner a less ambiguous label and gives the dataset curator a diagnostic. Family C only shows that, in a simple linear stress, effect labels have lower relative error than raw-action labels on held-out morphologies.
+
+\paragraph{Attack 7: The residual is not a safety certificate.}
+Correct. The residual is computed under a model. Family D and Family F show that wrong models and wrong task maps can create false confidence. The final claim says "diagnostic under valid local maps," not "certificate."
+
+\paragraph{Attack 8: Contact invalidates the first-order map.}
+Contact changes the task map. Family H shows that a known contact-effect map can help in a toy proxy, and that a wrong contact mode breaks the method. The paper does not claim contact-rich manipulation is solved.
+
+\paragraph{Attack 9: The literature sweep is automated.}
+Correct. It is a hostile coverage map, not final manual scholarship. The manuscript cites core representatives and uses the sweep to prevent broad novelty claims.
+
+\paragraph{Attack 10: The page count could hide padding.}
+The page count is driven by generated experiments, explicit schemas, failure analysis, reproducibility, and claim narrowing. The final PDF should be judged on whether these sections let a reviewer reproduce and attack the mechanism, not on length alone.
+
+\section{Hardware Validation Protocol Not Claimed Here}
+
+The next version needed for a real-robot claim would be a logged multi-robot validation, not a larger synthetic suite. A minimal hardware protocol would use two or three arms with different kinematics and actuator limits, for example a low-cost bimanual arm, a Franka-like manipulator, and a small educational arm. The protocol would log joint states, control period, commanded low-level actions, measured end-effector motion, estimated Jacobians, actuator saturation, and calibration uncertainty.
+
+The first hardware task should remain free-space and local. The robot would execute small source actions around matched workspace poses, then the target would execute raw normalized copy, target IK from measured source effect, EJAR absolute effect, and EJAR capability-token commands. The measured output would be optical or forward-kinematics end-effector displacement. This directly tests the first-order action-token claim without adding perception or contact confounds.
+
+The second hardware task would add timing. The same command sequence would be replayed at different control periods and action holds. The target action-effect map would explicitly include the control period. This tests Family G on real hardware.
+
+The third hardware task would add a simple contact fixture, such as pushing a puck against a low-friction plane with a known contact normal. The goal would not be dexterous manipulation. It would test whether a measured contact-effect map gives a useful action token and whether wrong contact modes produce the same failures as Family H.
+
+The hardware success criteria should be conservative:
+\begin{itemize}
+\item EJAR absolute-effect decoding should reduce measured one-step effect error relative to normalized copy.
+\item Capability tokens should improve local-authority matching but should not be scored as absolute displacement preservation.
+\item Residuals should correlate with measured infeasibility when the Jacobian and task map are calibrated.
+\item Residual calibration should degrade when the robot uses stale or intentionally biased Jacobians.
+\item The paper should remain negative when contact mode or task correspondence is wrong.
+\end{itemize}
+
+This protocol is included so the paper does not pretend the synthetic suite is the final empirical word. It is a roadmap for converting the mechanism paper into a hardware paper.
+
+\section{Worked Numerical Examples}
+
+\paragraph{Example 1: equal normalized actions, different effects.}
+Consider two two-link arms at different configurations. A source action that flexes joint one by half its allowed step may move the end effector mostly in the positive $y$ direction. The same normalized coordinate on a target near a different elbow angle may move mostly in $x$, or may move weakly because the target is near a singular direction. Componentwise normalization preserves the number but not the effect. Family A is a large randomized version of this example.
+
+\paragraph{Example 2: absolute-effect request.}
+Suppose the source action produces $d=(0.03,0.01)$. EJAR absolute-effect transfer asks the target for the same first-order displacement. If the target's local ellipsoid contains that direction and magnitude, the weighted pullback returns a small action with low residual. If the target cannot realize it, the action clips and the residual remains high. The residual is part of the action output.
+
+\paragraph{Example 3: capability-token request.}
+Suppose a source produces a token $z$ corresponding to "half of my local authority in this diagonal direction." A smaller target should not necessarily move the same metric distance. It should attempt the same fraction of its own local ellipsoid. Family A's token-relative error of 0.014 supports this local-authority interpretation, not absolute displacement equality.
+
+\paragraph{Example 4: wrong task map.}
+If the target's task frame is accidentally rotated by 30 degrees, EJAR can decode the requested effect in that rotated frame. The assumed residual can be low, but the true task-frame error is high. This is not an implementation detail; it is a central limitation. Family F makes the failure visible.
+
+\paragraph{Example 5: wrong contact mode.}
+If an endpoint push is assumed to stick but the object slides, the endpoint effect map is not the object effect map. Known contact-effect EJAR helps in the toy proxy, but wrong-mode EJAR degrades sharply. This example explains why the paper avoids a real contact-rich claim.
+
+\section{Artifact Maintenance Notes}
+
+The v3 runner is deterministic and intentionally simple. It avoids pandas and large in-memory datasets. The largest output files are row-level CSVs under \texttt{results/full\_scale/}; they are plain text so a reviewer can inspect or regenerate them without a custom binary reader. The plots are generated after all numeric families complete so a plotting failure cannot erase numeric evidence.
+
+The runner should be changed only when the manuscript claim changes. If a future maintainer modifies a family, the acceptance criteria in this appendix should be updated at the same time. Otherwise, the repo can drift into a state where the numbers and claim no longer match.
+
+The final PDF is not stored in the repository. The canonical batch export path is \texttt{C:/Users/wangz/Downloads/20.pdf}, and it should be created only after the manuscript is final under the 25-page standard. Intermediate local build products such as \texttt{paper/main.pdf}, \texttt{main.aux}, and \texttt{main.log} are build artifacts rather than submission artifacts.
+
+\section{Decision Table for Future Claims}
+
+\begin{center}
+\begin{tabular}{p{0.28\linewidth}p{0.28\linewidth}p{0.34\linewidth}}
+\toprule
+Claim & Current status & Missing evidence \\
+\midrule
+Componentwise normalized actions are not generally effect invariant & Supported synthetically & Real logs would strengthen, but not required for mechanism claim \\
+EJAR improves effect preservation under valid local maps & Supported synthetically & Hardware free-space validation \\
+Capability tokens preserve local authority & Supported synthetically & Hardware tests with different actuator limits \\
+Residual diagnoses infeasible effects & Supported under valid maps & Calibration under measured Jacobian uncertainty \\
+EJAR handles wrong task maps & Refuted & Requires correspondence learning, outside this paper \\
+EJAR handles contact-rich manipulation & Unsupported & Contact-mode estimation and real manipulation logs \\
+EJAR beats foundation policies & Not claimed & Large-policy training and evaluation, outside this paper \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\clearpage
+\section{Using EJAR in a Robot Data Pipeline}
+
+This paper is written as a mechanism paper, but the intended use case is practical robot data handling. A robot dataset normally stores observations, actions, rewards or task labels, and sometimes robot metadata. If two robots use different actuator conventions, the raw action column is not a shared physical label. EJAR suggests a different storage contract: each raw action can be accompanied by a local effect token, the local task map used to produce it, the action-limit metric, and a residual or feasibility label.
+
+\paragraph{Offline conversion.}
+For an existing dataset, an offline converter can read a trajectory, estimate or load the local Jacobian for each action, compute the absolute effect $d=Ja$, compute the capability token $z$, and store both. The raw action is retained for replay on the source robot, while the effect token becomes the cross-embodiment label. This does not require changing the original robot controller. It changes what the learning system treats as the common action variable.
+
+\paragraph{Training-time use.}
+A policy can be trained to predict absolute effects when tasks require metric end-effector or object displacement. It can be trained to predict capability tokens when the task requires comparable local authority across differently sized robots. A downstream per-robot decoder then turns the predicted token into a low-level action. This is analogous to using a tokenizer in language modeling: the token vocabulary matters, and a poor tokenization can make the learning problem harder.
+
+\paragraph{Evaluation-time use.}
+At evaluation time, the decoder returns an action and residual. A policy can be allowed to execute low-residual requests directly, shrink high-residual requests, ask for replanning, or route the request to a fallback controller. The v3 suite does not claim that residual fallback solves planning. It simply makes infeasibility visible to whatever planner or policy uses the action.
+
+\paragraph{Dataset auditing.}
+The same conversion can audit existing multi-robot data. If many demonstrations contain high residuals when retargeted to a target robot, then those action labels are not clean target labels. A dataset curator can separate examples that transfer as local effects from examples that require new correspondence, contact-mode reasoning, or morphology-specific supervision.
+
+\paragraph{What must be logged.}
+The minimum useful log contains joint state, action command, control period, actuator limits, task map definition, and either an analytic local Jacobian or enough calibration data to estimate one. Without those fields, an effect-token conversion becomes guesswork. The paper's synthetic suite should therefore be read as a specification for what future robot datasets ought to expose.
+
+\paragraph{Failure handling.}
+If an EJAR conversion reports high residuals, there are several possible meanings. The target may be near a singularity, the requested effect may exceed actuator limits, the task map may be wrong, the contact mode may have changed, or the Jacobian estimate may be stale. The residual is not a diagnosis by itself. It is a trigger for asking which assumption failed.
+
+\section{Application-Specific Boundaries}
+
+\paragraph{Free-space reaching.}
+Free-space reaching is the cleanest setting. The task map is end-effector displacement, the Jacobian is usually available, and first-order effects are meaningful for small actions. The current evidence is strongest for this setting. A real hardware version should start here.
+
+\paragraph{Mobile manipulation.}
+For a mobile manipulator, the task map might combine base motion and arm motion. EJAR can still apply if the local action-effect map is known, but the action-limit matrix must include base velocity limits, arm limits, and control-period differences. A static arm-only morphology descriptor is not enough.
+
+\paragraph{Dexterous hands.}
+Dexterous manipulation is more difficult. The task effect might be fingertip displacement, object twist, contact force, or a hybrid of these. A capability token could be useful because hands vary strongly in local authority, but task-map correspondence is the main obstacle. This paper does not solve that obstacle.
+
+\paragraph{Bimanual manipulation.}
+Bimanual settings add coordination constraints. A local effect token could include both end-effectors or an object-centric effect, but residuals should be interpreted jointly. One arm may realize its part while the pair fails the object-level effect.
+
+\paragraph{Locomotion and whole-body control.}
+The same principle applies to locomotion only if the task effect is local and meaningful, such as body twist over a short horizon. Contacts and hybrid dynamics make the map piecewise. EJAR would need mode-conditioned maps rather than a single smooth Jacobian.
+
+\paragraph{Vision-language-action policies.}
+For VLA policies, EJAR is not a replacement for language or vision. It is a candidate action head. The model could predict local effects or capability tokens conditioned on observation and language, and the robot-specific decoder could translate those tokens into low-level commands. This keeps embodiment-specific actuation out of the shared action vocabulary.
+
+\paragraph{Safety-critical control.}
+EJAR's residual is not a safety proof. In a safety-critical stack, it should be treated as one feature among many: collision checking, torque limits, state estimation uncertainty, human proximity, and task constraints still matter. The paper's residual result is promising but intentionally limited.
+
+\section{Submission-Readiness Rationale}
+
+The v2 paper was workshop-only because it had one small synthetic experiment and a narrow model-error stress. The v3 paper is stronger for four reasons.
+
+First, the empirical scope is now broad enough to attack the mechanism from several angles. The suite tests morphology, horizon length, learning labels, model error, infeasibility, task-map mismatch, control rate, contact-proxy behavior, and negative controls. A reviewer can still reject the paper for lacking hardware, but not because the paper hides obvious synthetic failure modes.
+
+Second, the baselines are stronger. Target IK is a serious controller baseline, and the learned raw-action models are a serious action-label baseline for a small synthetic setting. The paper does not rely on raw copy alone.
+
+Third, the claim is narrower than the positive results. The residual result is excellent under valid maps, but the paper still says residuals fail under wrong maps. The contact-proxy result is positive under known mode, but the paper still says real contact-rich manipulation is unsupported. The learned-label result favors effect labels on relative error, but the paper still says large policies may learn compensation.
+
+Fourth, the artifacts are reproducible. The runner is deterministic, the outputs are stored as plain CSV and JSON, the paper imports generated tables directly, and the final PDF can be checked for the v3 marker and headline numbers. This matters because the paper's central claim is about an interface; reviewers should be able to inspect exactly how each interface was scored.
+
+The honest final decision is therefore: submission-ready as a synthetic mechanism paper with explicit real-robot limitations. It should not be submitted as a complete robot foundation model paper, a contact manipulation paper, or a hardware transfer paper.
+
+\section{Final PDF Verification Checklist}
+
+Before the final export to Downloads, the following facts must be true:
+\begin{itemize}
+\item The built PDF has at least 25 pages.
+\item The PDF text contains `Submission-hardening version: v3'.
+\item The PDF text contains 114,040 and 19,440.
+\item The PDF text contains normalized-copy error 1.215, EJAR-absolute error 0.231, and long-horizon EJAR success 0.908.
+\item The PDF includes generated tables from `results/full\_scale'.
+\item The PDF states that evidence is synthetic and not a real-robot deployment claim.
+\item The repo docs record the final hash and page count.
+\item The local build PDF is removed after copying the final numbered PDF to Downloads.
+\item The worktree is committed and pushed before moving to Paper 21.
+\end{itemize}
+
+\section{Final Audit}
+
+The final v3 submission artifact should be judged by a narrow standard. It is strong as a synthetic mechanism paper because it has a clear hidden assumption, a precise action-interface mechanism, an old-controller novelty boundary, a local proposition, a large deterministic experiment suite, strong baselines, explicit failure families, negative controls, generated artifacts, and reproducibility instructions. It is not a real-robot paper. It should be submitted only with the claim that cross-embodiment action tokens should be audited and, when appropriate, renormalized by local task effects.
 
 \end{document}

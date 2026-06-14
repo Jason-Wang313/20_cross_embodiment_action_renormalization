@@ -1,0 +1,22 @@
+\begin{table}[t]
+\centering
+\small
+\caption{Family I negative controls and sanity checks. Matched morphology is a control where normalized copy should be competitive; random maps should break EJAR.}
+\label{tab:negative-controls}
+\begin{tabular}{lcccc}
+\toprule
+Scenario & Method & Mean rel. err. & p90 rel. err. & Clip rate \\
+\midrule
+matched\_morphology & normalized\_copy & 0.000 & 0.000 & 0.000 \\
+matched\_morphology & ejar\_absolute & 0.007 & 0.014 & 0.000 \\
+random\_map & normalized\_copy & 1.243 & 2.150 & 0.000 \\
+random\_map & ejar\_absolute & 1.338 & 2.086 & 0.140 \\
+zero\_effect & normalized\_copy & 0.000 & 0.000 & 0.000 \\
+zero\_effect & ejar\_absolute & 0.000 & 0.000 & 0.000 \\
+same\_geometry\_diff\_limits & normalized\_copy & 0.932 & 1.503 & 0.000 \\
+same\_geometry\_diff\_limits & ejar\_absolute & 0.465 & 0.896 & 0.682 \\
+same\_limits\_diff\_geometry & normalized\_copy & 1.015 & 1.802 & 0.000 \\
+same\_limits\_diff\_geometry & ejar\_absolute & 0.446 & 0.878 & 0.658 \\
+\bottomrule
+\end{tabular}
+\end{table}

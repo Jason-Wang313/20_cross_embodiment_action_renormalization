@@ -1,0 +1,19 @@
+\begin{table}[t]
+\centering
+\small
+\caption{Family A main morphology sweep. Lower effect error is better. Capability-token rows are evaluated against locally normalized target effects, while the other rows use absolute source effects.}
+\label{tab:main-sweep}
+\begin{tabular}{lcccc}
+\toprule
+Method & Mean rel. err. & p90 rel. err. & Cosine & Clip rate \\
+\midrule
+ejar\_capability & 0.014 & 0.025 & 0.999 & 0.007 \\
+ejar\_absolute & 0.231 & 0.760 & 0.977 & 0.427 \\
+target\_ik & 0.261 & 0.859 & 0.999 & 0.490 \\
+static\_home & 0.887 & 1.346 & 0.320 & 0.001 \\
+link\_scaled & 1.198 & 2.018 & 0.258 & 0.090 \\
+normalized\_copy & 1.215 & 2.041 & 0.258 & 0.000 \\
+raw\_joint & 1.353 & 2.244 & 0.261 & 0.193 \\
+\bottomrule
+\end{tabular}
+\end{table}

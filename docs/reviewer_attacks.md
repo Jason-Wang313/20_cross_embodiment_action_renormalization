@@ -2,12 +2,14 @@
 
 | Attack | Severity | Response / required evidence |
 | --- | --- | --- |
-| This is just operational-space control. | High | Concede controller ancestry; boundary is the policy/data action token plus capability normalization and infeasibility residual. Need to cite Khatib-style control and frame novelty narrowly. |
-| Synthetic planar arms are too weak. | High | Agree; paper-readiness should be workshop/revise unless real robot logs are added. Synthetic evidence is only a mechanism sanity check. |
-| Jacobians are often unavailable or wrong. | High | V2 adds a Jacobian-misspecification stress. At 20% relative Jacobian noise, mean relative effect error rises from 0.266 to 0.429 and the residual gap rises to 0.0102. The paper must state that EJAR does not solve Jacobian estimation. |
-| Contact tasks violate first-order free-space assumptions. | High | Mark unsupported; propose contact-conditioned task maps as future work. |
-| Learned policies can infer this from data. | Medium | Maybe with enough data; EJAR is still useful as an inductive action interface and exposes infeasibility. Need ablations on data scale in future. |
-| Capability normalization changes the task rather than preserving absolute effects. | Medium | Clarify two modes: absolute-effect pullback and local capability-normalized token execution. Report which is used in each experiment. |
-| Clipping destroys the guarantee. | Medium | Yes; clipping is exactly where the residual reports infeasibility. |
-| The method assumes matched task maps. | High | True; correspondence/task-map mismatch is outside scope. |
-| The literature sweep is automated and shallow. | Medium | Be transparent; use it for boundary finding, not as a substitute for manual citation scholarship. |
+| This is just operational-space control. | High | Concede controller ancestry; novelty is the action-token interface and infeasibility diagnostic at the policy/data boundary. |
+| Synthetic evidence is not enough for robot transfer. | High | Agree for hardware claims; v3 is submission-ready only as a synthetic mechanism paper. |
+| Raw normalized copy is a weak baseline. | High | v3 includes target IK, static-home, link-scaled, and learned raw-action baselines. |
+| Target IK is close to EJAR. | Medium | Correct; target IK is a controller baseline. EJAR's claim is about what shared action tokens should represent. |
+| Jacobians are often unavailable or wrong. | High | Family D quantifies noise, bias, dropout, finite-difference, and stale-map failures. |
+| Residuals can be falsely reassuring. | High | Family D and F show residual gaps under wrong maps; residual validity is limited to valid local maps. |
+| Capability tokens change the task. | Medium | The paper separates absolute-effect and capability-token modes and does not claim token mode preserves metric displacement. |
+| Learned policies can infer embodiment mismatch. | Medium | Family C tests simple learned labels; the paper does not deny that larger policies can learn compensation. |
+| Contact-rich manipulation violates assumptions. | High | Family H is only a contact proxy and explicitly not a real manipulation claim. |
+| Task-map correspondence is assumed. | High | Family F shows wrong correspondences break EJAR; correspondence learning is unsupported. |
+| The literature sweep is automated. | Medium | The sweep is framed as hostile coverage, not exhaustive manual scholarship. |

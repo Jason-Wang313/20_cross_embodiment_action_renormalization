@@ -1,0 +1,20 @@
+\begin{table}[t]
+\centering
+\small
+\caption{Family D target-model error. EJAR decodes with the listed estimated Jacobian but is evaluated under the true target Jacobian.}
+\label{tab:model-error}
+\begin{tabular}{lcccc}
+\toprule
+Decoder map & Mean rel. err. & p90 rel. err. & True residual & Residual gap \\
+\midrule
+exact & 0.239 & 0.742 & 0.016 & 0.000 \\
+gaussian\_002 & 0.252 & 0.757 & 0.016 & 0.001 \\
+finite\_diff\_noisy & 0.271 & 0.761 & 0.017 & 0.002 \\
+scale\_bias\_110 & 0.295 & 0.750 & 0.018 & 0.004 \\
+gaussian\_010 & 0.328 & 0.797 & 0.018 & 0.006 \\
+stale\_q & 0.376 & 0.780 & 0.021 & 0.007 \\
+gaussian\_020 & 0.427 & 0.884 & 0.022 & 0.012 \\
+column\_dropout & 0.733 & 1.682 & 0.030 & 0.020 \\
+\bottomrule
+\end{tabular}
+\end{table}

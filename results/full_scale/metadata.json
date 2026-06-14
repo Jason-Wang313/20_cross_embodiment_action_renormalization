@@ -1,0 +1,117 @@
+{
+  "stage": "complete",
+  "seed": 20020,
+  "total_rows": 114040,
+  "total_episodes": 19440,
+  "plot_failures": 0,
+  "families": [
+    {
+      "family": "A",
+      "rows": 21000,
+      "episodes": 0,
+      "seconds": 27.794257599976845
+    },
+    {
+      "family": "B",
+      "rows": 5040,
+      "episodes": 5040,
+      "seconds": 132.4489629000309
+    },
+    {
+      "family": "C",
+      "rows": 14400,
+      "episodes": 14400,
+      "seconds": 104.61896120000165
+    },
+    {
+      "family": "D",
+      "rows": 11200,
+      "episodes": 0,
+      "seconds": 17.004401199985296
+    },
+    {
+      "family": "E",
+      "rows": 7200,
+      "episodes": 0,
+      "seconds": 28.917051600001287
+    },
+    {
+      "family": "F",
+      "rows": 12600,
+      "episodes": 0,
+      "seconds": 19.531394199992064
+    },
+    {
+      "family": "G",
+      "rows": 21000,
+      "episodes": 0,
+      "seconds": 25.535980199987534
+    },
+    {
+      "family": "H",
+      "rows": 14400,
+      "episodes": 0,
+      "seconds": 17.008134299947415
+    },
+    {
+      "family": "I",
+      "rows": 7200,
+      "episodes": 0,
+      "seconds": 9.831273999996483
+    }
+  ],
+  "python": "3.10.11 (tags/v3.10.11:7d4cc5a, Apr  5 2023, 00:38:17) [MSC v.1929 64 bit (AMD64)]",
+  "platform": "Windows-10-10.0.26200-SP0",
+  "numpy": "1.26.4",
+  "matplotlib": "3.10.8",
+  "elapsed_seconds": 415.0129500000039,
+  "outputs": [
+    "results\\full_scale\\family_a_main_seed.csv",
+    "results\\full_scale\\family_a_main_summary.csv",
+    "results\\full_scale\\family_b_trajectory_seed.csv",
+    "results\\full_scale\\family_b_trajectory_summary.csv",
+    "results\\full_scale\\family_c_learning_seed.csv",
+    "results\\full_scale\\family_c_learning_summary.csv",
+    "results\\full_scale\\family_claim_evidence.csv",
+    "results\\full_scale\\family_d_model_error_seed.csv",
+    "results\\full_scale\\family_d_model_error_summary.csv",
+    "results\\full_scale\\family_e_residual_seed.csv",
+    "results\\full_scale\\family_e_residual_summary.csv",
+    "results\\full_scale\\family_f_task_mismatch_seed.csv",
+    "results\\full_scale\\family_f_task_mismatch_summary.csv",
+    "results\\full_scale\\family_g_control_rate_seed.csv",
+    "results\\full_scale\\family_g_control_rate_summary.csv",
+    "results\\full_scale\\family_h_contact_proxy_seed.csv",
+    "results\\full_scale\\family_h_contact_proxy_summary.csv",
+    "results\\full_scale\\family_i_negative_seed.csv",
+    "results\\full_scale\\family_i_negative_summary.csv",
+    "results\\full_scale\\family_runtime_summary.csv",
+    "results\\full_scale\\figure_contact_proxy.pdf",
+    "results\\full_scale\\figure_contact_proxy.png",
+    "results\\full_scale\\figure_learning_success.pdf",
+    "results\\full_scale\\figure_learning_success.png",
+    "results\\full_scale\\figure_main_sweep_error.pdf",
+    "results\\full_scale\\figure_main_sweep_error.png",
+    "results\\full_scale\\figure_model_error.pdf",
+    "results\\full_scale\\figure_model_error.png",
+    "results\\full_scale\\figure_residual_auprc.pdf",
+    "results\\full_scale\\figure_residual_auprc.png",
+    "results\\full_scale\\figure_task_mismatch.pdf",
+    "results\\full_scale\\figure_task_mismatch.png",
+    "results\\full_scale\\figure_trajectory_success.pdf",
+    "results\\full_scale\\figure_trajectory_success.png",
+    "results\\full_scale\\metadata.json",
+    "results\\full_scale\\progress.json",
+    "results\\full_scale\\table_claim_evidence.tex",
+    "results\\full_scale\\table_contact_proxy.tex",
+    "results\\full_scale\\table_control_rate.tex",
+    "results\\full_scale\\table_learning.tex",
+    "results\\full_scale\\table_main_sweep.tex",
+    "results\\full_scale\\table_model_error.tex",
+    "results\\full_scale\\table_negative_controls.tex",
+    "results\\full_scale\\table_residual_calibration.tex",
+    "results\\full_scale\\table_runtime_memory.tex",
+    "results\\full_scale\\table_task_mismatch.tex",
+    "results\\full_scale\\table_trajectory.tex"
+  ]
+}

@@ -1,13 +1,22 @@
 # Child Status
 
-- Stage: submission hardening v2 complete
-- Last update: 2026-06-13
+- Stage: submission hardening v3 complete
+- Last update: 2026-06-14
 - Commands run:
   - `python scripts/generate_literature.py`
   - `python experiments/run_ejar_synthetic.py`
-- Added v2 Jacobian-misspecification stress with 9000 rows.
-- Built v2 PDF and copied it to `C:\Users\wangz\Downloads\20.pdf`.
-- Removed local `paper\main.pdf`; Desktop copy is absent.
-- Failures: none
-- Recovery steps: none
-- Next: move to paper 21
+  - `python -m py_compile experiments\run_ejar_synthetic.py experiments\full_scale_ejar.py`
+  - `python experiments\full_scale_ejar.py`
+  - `pdflatex -interaction=nonstopmode -halt-on-error main.tex`
+  - `bibtex main`
+  - `pdflatex -interaction=nonstopmode -halt-on-error main.tex`
+  - `pdflatex -interaction=nonstopmode -halt-on-error main.tex`
+- Added v3 full-scale execution plan, RAM-light runner, 114,040 deterministic rows, 19,440 trajectory/learned-policy decision rows, generated tables/figures, and 26-page manuscript.
+- Final PDF: `C:\Users\wangz\Downloads\20.pdf`
+- Final PDF pages: 26
+- Final PDF bytes: 409,298
+- Final PDF SHA256: `E23D1C3D300FF6010FBE0F3574AC84ACA0E4FD5F2488048D6C57D79C2B9369E0`
+- Local `paper\main.pdf`: removed after final export and verification.
+- Failures: none remaining
+- Recovery steps: fixed one LaTeX filename escaping failure and expanded the manuscript from 20/23 pages to 26 pages with real appendix content.
+- Next: move to paper 21 after final push verification.

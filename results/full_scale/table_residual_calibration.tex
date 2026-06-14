@@ -1,0 +1,16 @@
+\begin{table}[t]
+\centering
+\small
+\caption{Family E infeasible-effect detection. Higher AUROC/AUPRC is better; false reassurance is the fraction of infeasible requests in the lowest-score quartile.}
+\label{tab:residual-calibration}
+\begin{tabular}{lcccc}
+\toprule
+Score & AUROC & AUPRC & False reassurance & Mean score \\
+\midrule
+ejar\_residual\_score & 0.996 & 0.995 & 0.000 & 0.018 \\
+action\_norm\_score & 0.828 & 0.783 & 0.029 & 0.506 \\
+static\_residual\_score & 0.783 & 0.731 & 0.085 & 0.055 \\
+condition\_score & 0.477 & 0.419 & 0.261 & 43.395 \\
+\bottomrule
+\end{tabular}
+\end{table}

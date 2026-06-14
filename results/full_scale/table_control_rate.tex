@@ -1,0 +1,17 @@
+\begin{table}[t]
+\centering
+\small
+\caption{Family G control-rate and latency mismatch. Correct-rate EJAR uses the target action-effect map for the target control period.}
+\label{tab:control-rate}
+\begin{tabular}{lcccc}
+\toprule
+Method & Mean rel. err. & p90 rel. err. & Cosine & Residual \\
+\midrule
+ejar\_correct\_rate & 0.250 & 0.778 & 0.982 & 0.019 \\
+ejar\_latency & 0.339 & 0.798 & 0.957 & 0.019 \\
+ejar\_wrong\_rate & 0.784 & 1.915 & 0.982 & 0.015 \\
+normalized\_copy & 1.648 & 3.469 & 0.248 & 0.000 \\
+raw\_joint & 1.882 & 3.919 & 0.244 & 0.000 \\
+\bottomrule
+\end{tabular}
+\end{table}

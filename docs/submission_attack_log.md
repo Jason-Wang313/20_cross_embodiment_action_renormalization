@@ -1,15 +1,20 @@
 # Submission Attack Log
 
-Updated: 2026-06-13 02:05:44 +01:00
+Updated: 2026-06-14
 
-## V2 Attack Rounds
+## V3 Attack Rounds
 
-1. **"This assumes exact Jacobians."** Added a Jacobian-misspecification stress where EJAR decodes with a noisy estimated target Jacobian but realized effects are evaluated with the true Jacobian.
-2. **"The residual may be falsely reassuring."** The stress reports both estimated-model residual and true residual gap. At 20% relative Jacobian noise, the residual gap rises to 0.0102.
-3. **"Operational-space control already knows this."** The paper keeps the novelty boundary narrow: the controller math is prior art; the claim is about the action representation and infeasibility diagnostic at the cross-embodiment data/policy interface.
-4. **"Synthetic planar arms are too weak."** The decision remains workshop-only / strong-revise; real multi-robot logs or contact manipulation are required for main-track strength.
-5. **"Task-map mismatch is unresolved."** Still true and explicitly out of scope; the v2 stress covers local Jacobian noise, not semantic task correspondence.
+1. **"The old paper is only seven pages."** Rewrote into a 26-page manuscript with generated full-scale evidence and detailed appendices.
+2. **"The evidence is too small."** Added a nine-family deterministic suite with 114,040 rows and 19,440 trajectory/learned-policy decision rows.
+3. **"Raw normalized copy is a weak straw baseline."** Added link-scaled copy, static-home decoder, target IK, learned raw-action labels, robot-ID raw labels, and morphology-conditioned raw labels.
+4. **"This is just operational-space control."** Kept the novelty boundary narrow: the controller math is prior art; the contribution is the action token at the cross-embodiment policy/data interface.
+5. **"Learned policies can infer morphology."** Added Family C learned action-label stress and reported relative error/cosine rather than only loose success.
+6. **"Jacobians are wrong in practice."** Added broader target-model error stress with Gaussian noise, scale bias, column dropout, finite-difference noise, and stale maps.
+7. **"Residuals can be falsely reassuring."** Added residual calibration and residual-gap reporting; final claim restricts residual validity to valid local maps.
+8. **"Task correspondence is assumed."** Added task-map mismatch family and states that EJAR cannot solve wrong semantic maps.
+9. **"Contact breaks the first-order model."** Added a contact-effect proxy that helps only under known contact mode and breaks under wrong mode.
+10. **"Negative controls are missing."** Added matched morphology, random map, zero-effect, geometry/limit controls.
 
 ## Terminal Assessment
 
-Recoverable sensitivity evidence was added. Remaining limitations require new datasets, real robots, or learned perception/Jacobian estimation.
+Recoverable synthetic-rigor issues were fixed. Remaining limitations require real robots, visual policies, learned correspondence, or contact-rich manipulation; those are explicitly outside the final narrow claim.

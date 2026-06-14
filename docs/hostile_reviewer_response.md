@@ -2,19 +2,30 @@
 
 ## Likely Rejection Point
 
-"EJAR assumes the exact Jacobian, but cross-embodiment learning often does not have a calibrated local action-effect map."
+"EJAR is operational-space control, and the experiments are synthetic."
 
 ## Response
 
-The v2 paper agrees and quantifies the boundary. EJAR is an action representation and diagnostic assuming a local task map and action-effect model; it does not solve Jacobian estimation. In the v2 stress, EJAR decodes actions with a noisy estimated target Jacobian and is evaluated under the true Jacobian. Mean relative error rises from 0.266 at exact Jacobians to 0.429 at 20% relative noise, and the residual gap rises to 0.0102.
+The v3 paper agrees with both premises and narrows the claim accordingly. It does not claim a new controller or real-robot transfer. It claims that cross-embodiment policy/data action tokens should be expressed as local task effects or local capability tokens, with residuals exposing infeasible requests under valid maps. Operational-space control supplies controller mathematics; EJAR moves the action-interface invariant to the policy/data boundary.
+
+The synthetic evidence is now full-scale for a mechanism paper: 114,040 rows across morphology diversity, long-horizon transfer, learned action-label stress, target-model error, residual calibration, task-map mismatch, control-rate/latency mismatch, a contact-effect proxy, and negative controls. The final manuscript explicitly says hardware, visual policies, contact-rich manipulation, and correspondence discovery remain unsupported.
+
+## What The Paper Can Claim
+
+- Componentwise action normalization is not generally effect preserving.
+- EJAR absolute-effect decoding improves synthetic effect transfer under valid maps.
+- Capability tokens preserve local authority rather than absolute displacement.
+- Residuals are useful infeasibility diagnostics under valid local maps.
+- Wrong maps and wrong contact modes break the method.
 
 ## What The Paper Still Cannot Claim
 
-- Robustness to arbitrary Jacobian or task-map error.
-- Contact-rich manipulation transfer.
-- Learned perception or correspondence discovery.
 - Real-robot validation.
+- Contact-rich manipulation transfer.
+- Robust learned visual policy performance.
+- Correspondence discovery.
+- Safety certification.
 
 ## Honest Position
 
-Workshop-only / strong-revise: crisp mechanism and useful sensitivity evidence, but not main-track without real multi-robot or contact-rich validation.
+Submission-ready as a synthetic mechanism paper with explicit real-robot limitations.
