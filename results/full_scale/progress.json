@@ -1,0 +1,18 @@
+{
+  "stage": "complete",
+  "family_status": {
+    "A": "complete",
+    "B": "complete",
+    "C": "complete",
+    "D": "complete",
+    "E": "complete",
+    "F": "complete",
+    "G": "complete",
+    "H": "complete",
+    "I": "complete"
+  },
+  "total_rows": 114040,
+  "total_episodes": 19440,
+  "plot_failures": 0,
+  "updated_unix": 1781472151.824828
+}

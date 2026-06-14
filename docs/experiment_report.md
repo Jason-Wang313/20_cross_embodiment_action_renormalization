@@ -2,38 +2,49 @@
 
 ## Question
 
-Does componentwise action normalization preserve task effects across robot bodies, and does Effect-Jacobian Action Renormalization (EJAR) reduce the mismatch in a controlled embodied setting?
+Does componentwise action normalization preserve task effects across robot bodies, and does Effect-Jacobian Action Renormalization (EJAR) reduce the mismatch under a broad deterministic synthetic audit?
 
-## Setup
+## V3 Setup
 
-A 2D teacher arm generates joint actions and first-order end-effector effects. Three target arms with different link lengths, degrees of freedom, and actuator limits receive either raw normalized copied actions or EJAR-decoded actions. The experiment includes random configurations and a repeated near-singular stress subset.
+The v3 suite uses 12 planar-arm morphologies with 2-6 degrees of freedom, different link lengths, actuator limits, redundancy, local conditioning, control periods, task-map assumptions, and contact-proxy maps. It runs nine families:
 
-## Key Results
+- Family A: embodiment diversity main sweep.
+- Family B: long-horizon trajectory transfer.
+- Family C: learned action-interface stress.
+- Family D: Jacobian/model-error stress.
+- Family E: residual calibration and infeasibility detection.
+- Family F: semantic task-map mismatch.
+- Family G: control-rate and latency mismatch.
+- Family H: contact-effect proxy.
+- Family I: negative controls and sanity checks.
 
-- ejar_absolute: mean relative one-step effect error 0.265, median 0.087, p90 0.778.
-- ejar_capability_token: mean relative one-step effect error 0.016, median 0.005, p90 0.023.
-- raw_copy: mean relative one-step effect error 1.252, median 1.212, p90 1.980.
+## Key V3 Results
 
-- ejar_absolute: trajectory success rate at 0.10 workspace units 0.792.
-- raw_copy: trajectory success rate at 0.10 workspace units 0.371.
-
-## V2 Jacobian-Misspecification Stress
-
-- sigma 0.00: mean relative error 0.266, p90 0.777, true residual 0.0177, residual gap 0.0000.
-- sigma 0.02: mean relative error 0.283, p90 0.783, true residual 0.0180, residual gap 0.0010.
-- sigma 0.05: mean relative error 0.287, p90 0.769, true residual 0.0179, residual gap 0.0025.
-- sigma 0.10: mean relative error 0.343, p90 0.853, true residual 0.0204, residual gap 0.0051.
-- sigma 0.20: mean relative error 0.429, p90 0.916, true residual 0.0226, residual gap 0.0102.
+- Total rows: 114,040.
+- Trajectory/learned-policy decision rows: 19,440.
+- Plot failures: 0.
+- Family A normalized-copy mean relative error: 1.215.
+- Family A EJAR-absolute mean relative error: 0.231.
+- Family A EJAR-capability token-relative error: 0.014.
+- Family B normalized-copy success at 0.10: 0.156.
+- Family B EJAR-absolute success at 0.10: 0.908.
+- Family C effect-label EJAR mean relative error at 8,000 samples: 0.295, versus pooled raw-action error 0.920.
+- Family D exact-Jacobian mean relative error: 0.239.
+- Family D 20 percent noisy-Jacobian mean relative error: 0.427.
+- Family E best infeasibility AUPRC: 0.995 using EJAR residual.
 
 ## Interpretation
 
-The synthetic evidence supports the narrow mechanism claim: copying normalized actuator values is not effect preserving across embodiments, while a local Jacobian pullback substantially improves first-order effect matching when the requested effect is feasible. Near singularities and actuator clipping remain failure modes; EJAR reports those through residuals rather than pretending the action transferred cleanly.
+The evidence supports a narrow synthetic mechanism claim: raw componentwise action normalization is not a reliable cross-embodiment effect invariant, while EJAR improves effect preservation when a valid local task map and action-effect model are available. The same suite also shows the boundary: wrong Jacobians, wrong semantic task maps, wrong timing, latency, and wrong contact modes degrade or break the claim.
 
 ## Artifacts
 
-- `results/one_step_results.csv`
-- `results/episode_results.csv`
-- `results/experiment_summary.json`
-- `results/jacobian_noise_stress.csv`
-- `figures/one_step_effect_error.png`
-- `figures/trajectory_transfer.png`
+- `experiments/full_scale_ejar.py`
+- `results/full_scale/metadata.json`
+- `results/full_scale/progress.json`
+- `results/full_scale/family_*_seed.csv`
+- `results/full_scale/family_*_summary.csv`
+- `results/full_scale/table_*.tex`
+- `results/full_scale/figure_*.pdf`
+- `results/full_scale/figure_*.png`
+- `docs/evidence_summary.md`

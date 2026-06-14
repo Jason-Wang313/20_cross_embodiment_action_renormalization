@@ -1,23 +1,23 @@
 # Submission Readiness Decision
 
-Decision: workshop-only / strong-revise.
+Decision: submission-ready as a synthetic mechanism paper.
 
-## Why Not Submit-Ready
+## Why Submit-Ready Under The Narrow Claim
 
-- Evidence is synthetic planar-arm evidence only.
-- No real heterogeneous robot logs are included.
-- Contact-rich manipulation and task-correspondence learning are out of scope.
-- EJAR assumes a local action-effect model; v2 shows wrong Jacobians degrade effect preservation and residual trustworthiness.
+- The v3 paper no longer rests on a small planar-arm sanity check; it includes a deterministic full-scale suite with 114,040 rows and 19,440 trajectory/learned-policy decision rows.
+- The suite includes strong baselines: target IK, static-home decoding, link-scaled copy, raw learned labels, robot-ID raw labels, and morphology-conditioned raw labels.
+- The main claim is narrow: action tokens should preserve local task effects or local capability authority, and residuals should expose infeasible requests under valid maps.
+- Boundary failures are explicit: wrong Jacobians, task-map mismatch, wrong control periods, latency, and wrong contact modes are measured rather than hidden.
+- The final manuscript is 26 pages and imports generated tables/figures directly.
 
-## Why Not Kill
+## Remaining Limits
 
-- The action-normalization failure is clear and runnable.
-- The formal local preservation proposition is honest about rank, clipping, damping, and feasibility assumptions.
-- V2 adds sensitivity evidence for the known-Jacobian assumption rather than hiding it.
+- No real robot logs.
+- No visual policy training.
+- No real contact-rich manipulation.
+- No learned correspondence or task-map discovery.
+- No safety certification.
 
-## Required Next Work For Main-Track Strength
+## Honest Submission Position
 
-- Validate on logged heterogeneous robot data or real multi-robot demonstrations.
-- Add contact-conditioned task maps and manipulation tasks.
-- Evaluate learned or calibrated Jacobian estimates.
-- Stress semantic task-map correspondence errors.
+Submit as a mechanism and diagnostic paper for cross-embodiment action interfaces, not as a robot foundation policy, hardware-transfer, or contact-manipulation paper.

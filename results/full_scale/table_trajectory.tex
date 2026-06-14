@@ -1,0 +1,19 @@
+\begin{table}[t]
+\centering
+\small
+\caption{Family B long-horizon transfer. Success is final target path error below 0.10 workspace units.}
+\label{tab:trajectory-v3}
+\begin{tabular}{lcccc}
+\toprule
+Method & Median final err. & p90 final err. & Success 0.10 & Clip steps \\
+\midrule
+ejar\_absolute & 0.003 & 0.092 & 0.908 & 0.900 \\
+ejar\_residual\_fallback & 0.003 & 0.092 & 0.908 & 0.901 \\
+target\_ik & 0.002 & 0.102 & 0.899 & 3.160 \\
+static\_home & 0.174 & 0.397 & 0.276 & 0.000 \\
+link\_scaled & 0.234 & 0.566 & 0.174 & 1.328 \\
+normalized\_copy & 0.244 & 0.586 & 0.156 & 0.000 \\
+raw\_joint & 0.258 & 0.611 & 0.142 & 1.942 \\
+\bottomrule
+\end{tabular}
+\end{table}

@@ -1,0 +1,7 @@
+claim,evidence,status
+Raw normalized actions are not effect invariant,Family A normalized-copy mean error 1.215,supported synthetic
+EJAR absolute reduces morphology transfer error,Family A EJAR mean error 0.231,supported synthetic
+"Capability tokens preserve local authority, not absolute displacement",Family A token mean error 0.014,supported with scope
+One-step mismatch compounds over trajectories,Family B normalized success 0.156; EJAR 0.908,supported synthetic
+Effect labels ease simple policy transfer,Family C effect-label mean error 0.295 vs pooled raw 0.920,limited linear-policy evidence
+Residual is an infeasibility diagnostic under valid maps,Family E best AUPRC 0.995 with ejar_residual_score,supported only under model validity
