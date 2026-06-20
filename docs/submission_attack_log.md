@@ -1,6 +1,6 @@
 # Submission Attack Log
 
-Updated: 2026-06-14
+Updated: 2026-06-20
 
 ## V3 Attack Rounds
 
@@ -14,6 +14,7 @@ Updated: 2026-06-14
 8. **"Task correspondence is assumed."** Added task-map mismatch family and states that EJAR cannot solve wrong semantic maps.
 9. **"Contact breaks the first-order model."** Added a contact-effect proxy that helps only under known contact mode and breaks under wrong mode.
 10. **"Negative controls are missing."** Added matched morphology, random map, zero-effect, geometry/limit controls.
+11. **"The PDF link styling depends on implicit defaults."** Added explicit `hyperref` border colors, rebuilt the final PDF, and visually checked all affected link pages against the VLA-v4 role model.
 
 ## Terminal Assessment
 

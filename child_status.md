@@ -1,7 +1,7 @@
 # Child Status
 
-- Stage: submission hardening v3 complete
-- Last update: 2026-06-14
+- Stage: submission hardening v3 complete; VLA-style boxed-link hardening complete
+- Last update: 2026-06-20
 - Commands run:
   - `python scripts/generate_literature.py`
   - `python experiments/run_ejar_synthetic.py`
@@ -15,8 +15,12 @@
 - Final PDF: `C:\Users\wangz\Downloads\20.pdf`
 - Final PDF pages: 26
 - Final PDF bytes: 409,298
-- Final PDF SHA256: `E23D1C3D300FF6010FBE0F3574AC84ACA0E4FD5F2488048D6C57D79C2B9369E0`
+- Final PDF SHA256: `106CC7757D60C2D17A1434DFE281981F745922B90855E29CE6E260FC0CF66E94`
+- VLA-style link annotations: 60
+- Link pages: `[(1, 16), (2, 25), (3, 13), (16, 1), (17, 5)]`
+- Annotation colors: green = 54, red = 6, cyan = 0
+- Border widths: `(0, 0, 1)` for all 60 link annotations
 - Local `paper\main.pdf`: removed after final export and verification.
 - Failures: none remaining
 - Recovery steps: fixed one LaTeX filename escaping failure and expanded the manuscript from 20/23 pages to 26 pages with real appendix content.
-- Next: move to paper 21 after final push verification.
+- Next: none remaining for Paper20 after commit/push and clean/upstream verification.

@@ -22,7 +22,8 @@
 - Path: `C:\Users\wangz\Downloads\20.pdf`
 - Pages: 26
 - Bytes: 409,298
-- SHA256: `E23D1C3D300FF6010FBE0F3574AC84ACA0E4FD5F2488048D6C57D79C2B9369E0`
+- SHA256: `106CC7757D60C2D17A1434DFE281981F745922B90855E29CE6E260FC0CF66E94`
+- VLA-style boxed-link audit: 60 annotations on pages `[(1, 16), (2, 25), (3, 13), (16, 1), (17, 5)]`; colors green = 54, red = 6, cyan = 0; all borders `(0, 0, 1)`.
 
 ## Scope
 
