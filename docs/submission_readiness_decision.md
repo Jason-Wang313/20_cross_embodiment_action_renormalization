@@ -9,6 +9,7 @@ Decision: submission-ready as a synthetic mechanism paper.
 - The main claim is narrow: action tokens should preserve local task effects or local capability authority, and residuals should expose infeasible requests under valid maps.
 - Boundary failures are explicit: wrong Jacobians, task-map mismatch, wrong control periods, latency, and wrong contact modes are measured rather than hidden.
 - The final manuscript is 26 pages and imports generated tables/figures directly.
+- The final PDF now matches the VLA-v4 role model's boxed-link convention: green citation/URL boxes, red internal-reference boxes, no cyan boxes, and one-point borders.
 
 ## Remaining Limits
 

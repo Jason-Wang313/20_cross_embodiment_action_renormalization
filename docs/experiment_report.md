@@ -48,3 +48,11 @@ The evidence supports a narrow synthetic mechanism claim: raw componentwise acti
 - `results/full_scale/figure_*.pdf`
 - `results/full_scale/figure_*.png`
 - `docs/evidence_summary.md`
+
+## Final Artifact
+
+- PDF: `C:\Users\wangz\Downloads\20.pdf`
+- Pages: 26
+- Bytes: 409,298
+- SHA256: `106CC7757D60C2D17A1434DFE281981F745922B90855E29CE6E260FC0CF66E94`
+- VLA-style boxed links: 60 annotations; pages `[(1, 16), (2, 25), (3, 13), (16, 1), (17, 5)]`; colors green = 54, red = 6, cyan = 0; all borders `(0, 0, 1)`.

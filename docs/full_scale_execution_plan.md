@@ -421,6 +421,20 @@ The final paper should use these claim rules:
 - Manuscript visibly says `Submission-hardening version: v3`.
 - Paper is at least 25 pages by PDF page count.
 - Final PDF exists at `C:\Users\wangz\Downloads\20.pdf`.
+
+## 2026-06-20 VLA-Style Link Hardening Addendum
+
+After the v3 scientific content was finalized, the canonical PDF was rebuilt
+with explicit VLA-style `hyperref` boxed-link settings. This addendum does not
+change experiments, claims, figures, tables, bibliography content, or page
+count. It only hardens final PDF presentation:
+
+- citation links use green one-point boxes;
+- URL links use green one-point boxes;
+- internal section/table/figure links use red one-point boxes;
+- no cyan URL boxes appear;
+- affected link pages 1, 2, 3, 16, and 17 were rendered and visually checked
+  against the visible VLA-v4 role model.
 - `C:\Users\wangz\Downloads\20.pdf` is verified as the actual Paper20 final.
 - Old short `20.pdf` remains outside Downloads.
 - Local `paper/main.pdf` is removed after final export.

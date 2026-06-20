@@ -12,7 +12,9 @@
 - [x] Paper source is `paper/main.tex`.
 - [x] Canonical batch PDF path is `C:\Users\wangz\Downloads\20.pdf`.
 - [x] Final PDF page count: 26.
-- [x] Final PDF SHA256: `E23D1C3D300FF6010FBE0F3574AC84ACA0E4FD5F2488048D6C57D79C2B9369E0`.
+- [x] Final PDF bytes: 409,298.
+- [x] Final PDF SHA256: `106CC7757D60C2D17A1434DFE281981F745922B90855E29CE6E260FC0CF66E94`.
+- [x] VLA-style boxed links: 60 annotations; pages `[(1, 16), (2, 25), (3, 13), (16, 1), (17, 5)]`; colors green = 54, red = 6, cyan = 0; all borders `(0, 0, 1)`.
 - [x] Local `paper/main.pdf` removed after copying the canonical final PDF to Downloads.
 
 Recommended verification commands:
